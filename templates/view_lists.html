@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <title>Almoxarifado - Nomes e Projetos Cadastrados</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <div class="container">
+        <h1>Nomes e Projetos Cadastrados</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="messages">
+              {% for category, message in messages %}
+                <li class="{{ category }}">{{ message }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <a href="{{ url_for('index') }}">Voltar ao Controle de Saída</a>
+
+        <h2>Nomes Cadastrados</h2>
+        <div class="list-container">
+            {% for nome in nomes %}
+            <div class="item">
+                <span>{{ nome }}</span>
+                <form method="POST" action="{{ url_for('delete_nome', nome=nome) }}">
+                    <button type="submit" class="delete-btn" onclick="return confirm('Tem certeza que deseja excluir este nome?')">Excluir</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+
+        <h2>Projetos Cadastrados</h2>
+        <div class="list-container">
+            {% for projeto in projetos %}
+            <div class="item">
+                <span>{{ projeto }}</span>
+                <form method="POST" action="{{ url_for('delete_projeto', projeto=projeto) }}">
+                    <button type="submit" class="delete-btn" onclick="return confirm('Tem certeza que deseja excluir este projeto?')">Excluir</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <title>Almoxarifado - Controle de Saída</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <!-- Formulário para adicionar novo nome -->
+     <h2>Adicionar novo nome</h2>
+     <form method="POST" action="/add_nome">
+         <input type="text" name="novo_nome" placeholder="Digite o novo nome" required />
+          <button type="submit">Adicionar Nome</button>
+         </form>
+
+      <!-- Formulário para adicionar novo projeto -->
+       <h2>Adicionar novo projeto</h2>
+        <form method="POST" action="/add_projeto">
+             <input type="text" name="novo_projeto" placeholder="Digite o novo projeto" required />
+             <button type="submit">Adicionar Projeto</button>
+             </form>
+
+    <p><a href="{{ url_for('view_lists') }}">Ver Nomes e Projetos Cadastrados</a></p>
+
+    <div class="container">
+        <h1>Controle de Saída de Materiais - Almoxarifado</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="messages">
+              {% for category, message in messages %}
+                <li class="{{ category }}">{{ message }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="/">
+            <label for="nome">Nome:</label>
+            <select id="nome" name="nome" required>
+                {% for nome in nomes %}
+                <option value="{{ nome }}">{{ nome }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="projeto">Projeto:</label>
+            <select id="projeto" name="projeto" required>
+                {% for projeto in projetos %}
+                <option value="{{ projeto }}">{{ projeto }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="material">Material:</label>
+            <input type="text" id="material" name="material" required />
+
+            <label for="quantidade">Quantidade:</label>
+            <input type="number" id="quantidade" name="quantidade" min="1" required />
+
+            <button type="submit">Registrar Saída</button>
+        </form>
+        </table>
+    </div>
+</body>
+</html>
