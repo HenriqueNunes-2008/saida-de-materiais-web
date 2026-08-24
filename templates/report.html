@@ -1,0 +1,109 @@
+{% extends 'base_fragment.html' %}
+{% block content %}
+<div class="panel report-panel">
+  <div class="report-header">
+    <div>
+      <h2>Relatório de Saídas</h2>
+      <p class="muted-text">Acompanhe as saídas por período, projeto, material e funcionário.</p>
+    </div>
+    <a class="btn primary" href="{{ url_for('download_excel') }}">Baixar planilha mensal</a>
+  </div>
+
+  <form method="GET" action="{{ url_for('report') }}" class="report-filters">
+    <div class="filter-panel">
+      <div class="filter-title">Aplicar Filtros</div>
+
+      <div class="filter-grid">
+        <div class="filter-field">
+          <label for="period">Período</label>
+          <select id="period" name="period">
+            <option value="all" {% if filters.period == 'all' %}selected{% endif %}>Todos</option>
+            <option value="7d" {% if filters.period == '7d' %}selected{% endif %}>Últimos 7 dias</option>
+            <option value="30d" {% if filters.period == '30d' %}selected{% endif %}>Último mês</option>
+            <option value="custom" {% if filters.period == 'custom' %}selected{% endif %}>Período específico</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="start_date">Data inicial</label>
+          <input type="date" id="start_date" name="start_date" value="{{ filters.start_date }}">
+        </div>
+
+        <div class="filter-field">
+          <label for="end_date">Data final</label>
+          <input type="date" id="end_date" name="end_date" value="{{ filters.end_date }}">
+        </div>
+
+        <div class="filter-field">
+          <label for="project">Projeto</label>
+          <input id="project" list="projectOptions" name="project" value="{{ filters.project }}" placeholder="Buscar projeto">
+        </div>
+
+        <div class="filter-field">
+          <label for="material">Material</label>
+          <input id="material" list="materialOptions" name="material" value="{{ filters.material }}" placeholder="Digite para buscar">
+        </div>
+
+        <div class="filter-field">
+          <label for="employee">Funcionário</label>
+          <input id="employee" list="employeeOptions" name="employee" value="{{ filters.employee }}" placeholder="Buscar funcionário">
+        </div>
+      </div>
+
+      <div class="filter-actions">
+        <a class="btn secondary" href="{{ url_for('report') }}">Limpar Filtros</a>
+        <button class="btn primary" type="submit">Aplicar Filtros</button>
+      </div>
+    </div>
+  </form>
+
+  <datalist id="projectOptions">
+    {% for item in suggestions.projects %}
+      <option value="{{ item }}"></option>
+    {% endfor %}
+  </datalist>
+
+  <datalist id="materialOptions">
+    {% for item in suggestions.materials %}
+      <option value="{{ item }}"></option>
+    {% endfor %}
+  </datalist>
+
+  <datalist id="employeeOptions">
+    {% for item in suggestions.employees %}
+      <option value="{{ item }}"></option>
+    {% endfor %}
+  </datalist>
+
+  {% if material_outputs %}
+    <div class="table-wrap">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Funcionário</th>
+            <th>Projeto</th>
+            <th>Material</th>
+            <th>Quantidade</th>
+            <th>Registrado por</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in material_outputs %}
+          <tr>
+            <td>{{ m.created_at.strftime('%d/%m/%Y %H:%M') if m.created_at else '' }}</td>
+            <td>{{ m.employee_name }}</td>
+            <td>{{ m.project_name or '' }}</td>
+            <td>{{ m.material }}</td>
+            <td>{{ m.quantity }}</td>
+            <td>{{ m.recorded_by }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="empty-state">Nenhuma saída encontrada para os filtros selecionados. Ajuste os critérios ou baixe a planilha mensal.</p>
+  {% endif %}
+</div>
+{% endblock %}

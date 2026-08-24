@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Entrar — FlexiMedical / Kure</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="auth-page">
+  <div class="auth-background"></div>
+
+  <main class="auth-shell">
+    <section class="auth-modal" aria-live="polite">
+      <div class="auth-header">
+        <div class="logo-placeholder large">LOGO</div>
+        <div>
+          <p class="eyebrow">FlexiMedical / Kure</p>
+          <h1>Controle de Saídas</h1>
+        </div>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <ul class="messages auth-messages">
+            {% for category, message in messages %}
+              <li class="{{ category }}">{{ message }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      {% endwith %}
+
+      <div id="loginPane" class="auth-pane active">
+        <form method="POST" action="/login" id="loginForm">
+          <label>Email</label>
+          <input type="email" name="email" id="loginEmail" placeholder="seuemail@empresa.com" required />
+
+          <label>Senha</label>
+          <div class="password-field">
+            <input type="password" name="password" id="loginPasswordAuth" placeholder="Sua senha" required />
+            <button type="button" class="eye" data-target="loginPasswordAuth" aria-label="Mostrar senha">👁️</button>
+          </div>
+
+          <button type="submit" class="btn primary auth-btn">Entrar</button>
+        </form>
+
+        <div class="auth-links">
+          <a href="#" class="secondary-link" data-pane="register">Ainda não fez sua conta? <strong>Cadastre-se</strong></a>
+          <a href="#" class="secondary-link" data-pane="forgot">Esqueci minha senha</a>
+        </div>
+      </div>
+
+      <div id="registerPane" class="auth-pane">
+        <form method="POST" action="/register">
+          <label>Nome</label>
+          <input type="text" name="name" placeholder="Seu nome completo" required />
+
+          <label>Setor</label>
+          <select name="sector" required>
+            <option value="">Selecione</option>
+            <option value="Almoxarifado">Almoxarifado</option>
+            <option value="Compras">Compras</option>
+            <option value="TI">TI</option>
+          </select>
+
+          <label>Email</label>
+          <input type="email" name="email" placeholder="seuemail@empresa.com" required />
+
+          <label>Senha</label>
+          <div class="password-field">
+            <input type="password" name="password" id="registerPasswordAuth" placeholder="Crie sua senha" required />
+            <button type="button" class="eye" data-target="registerPasswordAuth" aria-label="Mostrar senha">👁️</button>
+          </div>
+
+          <button type="submit" class="btn primary auth-btn">Cadastrar</button>
+        </form>
+
+        <p class="muted-text">
+          Já fez sua conta? <a href="#" class="secondary-link" data-pane="login">Faça Login</a>
+        </p>
+      </div>
+
+      <div id="forgotPane" class="auth-pane">
+        <p class="forgot-message">Para confirmar a redefinição da sua senha, uma solicitação será enviada ao TI para revisão.</p>
+
+        <form method="POST" action="/forgot" id="forgotForm">
+          <input type="hidden" name="forgot_email" id="forgotEmailHidden" value="">
+        </form>
+
+        <div class="forgot-actions">
+          <button type="button" class="btn secondary auth-btn" data-pane="login">Cancelar</button>
+          <button type="submit" class="btn primary auth-btn" form="forgotForm">Enviar</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const panes = document.querySelectorAll('.auth-pane');
+    const links = document.querySelectorAll('[data-pane]');
+    const forgotEmailHidden = document.getElementById('forgotEmailHidden');
+    const loginEmailInput = document.getElementById('loginEmail');
+
+    function showPane(name) {
+      panes.forEach((pane) => pane.classList.toggle('active', pane.id === name + 'Pane'));
+    }
+
+    links.forEach((link) => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        const target = link.dataset.pane;
+
+        if (target === 'forgot') {
+          const email = loginEmailInput.value.trim();
+          if (email) forgotEmailHidden.value = email;
+        }
+
+        showPane(target);
+      });
+    });
+
+    document.querySelectorAll('.eye').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = document.getElementById(btn.dataset.target);
+        target.type = target.type === 'password' ? 'text' : 'password';
+      });
+    });
+  </script>
+</body>
+</html>

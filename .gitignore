@@ -1,1 +1,36 @@
+# Environment files
 .env
+.env.local
+.env.*
+!.env.example
+
+# Virtual environments
+.venv/
+venv/
+
+# Python caches and bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Local databases / generated artifacts
+*.db
+*.sqlite3
+instance/
+*.xlsx
+*.xls
+saida_materiais_*.xlsx
+nomes.txt
+projetos.txt
+
+# Editor / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

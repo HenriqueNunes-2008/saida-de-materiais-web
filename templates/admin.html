@@ -1,0 +1,55 @@
+{% extends 'base_fragment.html' %}
+{% block content %}
+    <div class="panel">
+        <h3>Painel TI - Gerenciar Usuários</h3>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="messages">
+              {% for category, message in messages %}
+                <li class="{{ category }}">{{ message }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Setor</th>
+                    <th>Email</th>
+                    <th>Aprovado</th>
+                    <th>Ativo</th>
+                    <th>Reset?</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td>{{ u.id }}</td>
+                    <td>{{ u.name }}</td>
+                    <td>{{ u.sector }}</td>
+                    <td>{{ u.email }}</td>
+                    <td>{{ 'Sim' if u.approved else 'Não' }}</td>
+                    <td>{{ 'Sim' if u.active else 'Não' }}</td>
+                    <td>{{ 'Sim' if u.reset_required else 'Não' }}</td>
+                    <td>
+                        <form style="display:inline" method="POST" action="{{ url_for('admin_approve', user_id=u.id) }}">
+                            <button type="submit" class="btn small">Aprovar</button>
+                        </form>
+                        <form style="display:inline" method="POST" action="{{ url_for('admin_toggle_active', user_id=u.id) }}">
+                            <button type="submit" class="btn small">Ativar/Bloquear</button>
+                        </form>
+                        <form style="display:inline" method="POST" action="{{ url_for('admin_reset_password', user_id=u.id) }}">
+                            <button type="submit" class="btn small">Redefinir Senha</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
