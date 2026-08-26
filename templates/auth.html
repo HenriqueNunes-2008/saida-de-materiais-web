@@ -12,7 +12,7 @@
   <main class="auth-shell">
     <section class="auth-modal" aria-live="polite">
       <div class="auth-header">
-        <div class="logo-placeholder large">LOGO</div>
+        <img src="static/LogoFlexcolor.png" style="width: 100px; height: auto;" alt="Logo FlexiMedical">
         <div>
           <p class="eyebrow">FlexiMedical / Kure</p>
           <h1>Controle de Saídas</h1>
@@ -59,7 +59,6 @@
             <option value="">Selecione</option>
             <option value="Almoxarifado">Almoxarifado</option>
             <option value="Compras">Compras</option>
-            <option value="TI">TI</option>
           </select>
 
           <label>Email</label>
@@ -80,10 +79,11 @@
       </div>
 
       <div id="forgotPane" class="auth-pane">
-        <p class="forgot-message">Para confirmar a redefinição da sua senha, uma solicitação será enviada ao TI para revisão.</p>
+        <p class="forgot-message">Informe o e-mail cadastrado para solicitar a redefinição; o TI receberá a solicitação.</p>
 
         <form method="POST" action="/forgot" id="forgotForm">
-          <input type="hidden" name="forgot_email" id="forgotEmailHidden" value="">
+          <label for="forgotEmail">E-mail</label>
+          <input type="email" name="forgot_email" id="forgotEmail" placeholder="seuemail@empresa.com" required />
         </form>
 
         <div class="forgot-actions">
@@ -94,10 +94,26 @@
     </section>
   </main>
 
+  <!-- Forgot confirmation modal (opened from "Esqueci minha senha") -->
+  <div id="forgotModal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <button class="close" id="closeForgot">×</button>
+      <h3>Solicitar Redefinição de Senha</h3>
+      <p class="forgot-message">Para confirmar a redefinição da sua senha, uma solicitação será enviada ao TI para revisão.</p>
+      <form method="POST" action="/forgot" id="forgotFormModal">
+        <label for="forgotEmailModalInput">E-mail</label>
+        <input type="email" name="forgot_email" id="forgotEmailModalInput" placeholder="seuemail@empresa.com" required />
+        <div style="margin-top:12px; text-align:right;">
+          <button type="button" class="btn secondary" id="forgotCancel">Cancelar</button>
+          <button type="submit" class="btn primary">Enviar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     const panes = document.querySelectorAll('.auth-pane');
     const links = document.querySelectorAll('[data-pane]');
-    const forgotEmailHidden = document.getElementById('forgotEmailHidden');
     const loginEmailInput = document.getElementById('loginEmail');
 
     function showPane(name) {
@@ -110,18 +126,31 @@
         const target = link.dataset.pane;
 
         if (target === 'forgot') {
-          const email = loginEmailInput.value.trim();
-          if (email) forgotEmailHidden.value = email;
+          // open the dedicated forgot confirmation modal
+          const forgotModal = document.getElementById('forgotModal');
+          const forgotEmailInput = document.getElementById('forgotEmailModalInput');
+          const email = (loginEmailInput && loginEmailInput.value) ? loginEmailInput.value.trim() : '';
+          if (email) forgotEmailInput.value = email;
+          forgotModal.style.display = 'block';
+          forgotModal.setAttribute('aria-hidden', 'false');
+          return;
         }
 
         showPane(target);
       });
     });
 
+    // Forgot modal controls
+    const forgotModal = document.getElementById('forgotModal');
+    const closeForgot = document.getElementById('closeForgot');
+    const forgotCancel = document.getElementById('forgotCancel');
+    if (closeForgot) closeForgot.addEventListener('click', (e) => { e.preventDefault(); forgotModal.style.display='none'; forgotModal.setAttribute('aria-hidden','true'); });
+    if (forgotCancel) forgotCancel.addEventListener('click', (e) => { e.preventDefault(); forgotModal.style.display='none'; forgotModal.setAttribute('aria-hidden','true'); });
+
     document.querySelectorAll('.eye').forEach((btn) => {
       btn.addEventListener('click', () => {
         const target = document.getElementById(btn.dataset.target);
-        target.type = target.type === 'password' ? 'text' : 'password';
+        if (target) target.type = target.type === 'password' ? 'text' : 'password';
       });
     });
   </script>

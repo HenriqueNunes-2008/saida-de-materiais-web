@@ -195,11 +195,11 @@ def index():
     if not current_user.is_authenticated:
         return render_template('auth.html')
 
-    if current_user.sector == 'Compras' and not current_user.is_admin:
-        return redirect(url_for('report'))
-
-    if current_user.is_admin:
+    if current_user.sector == 'TI' or current_user.is_admin:
         return redirect(url_for('admin_panel'))
+
+    if current_user.sector == 'Compras':
+        return redirect(url_for('report'))
 
     # Somente usuários do setor Almoxarifado (ou admins) podem registrar saídas
     if request.method == "POST":
@@ -236,11 +236,12 @@ def index():
     can_edit = False
     can_download = False
     if current_user.is_authenticated:
-        if current_user.is_admin or current_user.sector == 'Almoxarifado':
+        if current_user.sector == 'Almoxarifado':
             can_edit = True
             can_download = True
         elif current_user.sector == 'Compras':
             can_download = True
+        # TI (is_admin) does not get saída/report access in the main UI
 
     nomes_list = get_nomes()
     projetos_list = get_projetos()
@@ -251,7 +252,7 @@ def index():
 @login_required
 def download_excel():
     # Apenas Almoxarifado e Compras aprovados podem baixar o arquivo xlsx
-    if not (current_user.is_admin or current_user.sector in ['Almoxarifado', 'Compras']):
+    if not (current_user.sector in ['Almoxarifado', 'Compras']):
         flash('Acesso negado ao download.', 'error')
         return redirect(url_for('index'))
 
@@ -426,7 +427,10 @@ def login():
 
         login_user(user)
         flash('Login realizado com sucesso.', 'success')
-        if user.sector == 'Compras' and not user.is_admin:
+        # Route TI users to admin panel, Compras to reports, others to index
+        if user.sector == 'TI' or user.is_admin:
+            return redirect(url_for('admin_panel'))
+        if user.sector == 'Compras':
             return redirect(url_for('report'))
         return redirect(url_for('index'))
 
@@ -455,11 +459,43 @@ def forgot_password():
     flash('Solicitação enviada. O TI receberá alerta para redefinir a senha.', 'success')
     return redirect(url_for('index'))
 
+
+@app.route('/change_password', methods=['POST'])
+@login_required
+def change_password():
+    current = request.form.get('current_password', '')
+    newp = request.form.get('new_password', '')
+    confirm = request.form.get('confirm_password', '')
+
+    if not all([current, newp, confirm]):
+        flash('Preencha todos os campos de senha.', 'error')
+        return redirect(request.referrer or url_for('index'))
+
+    # Verify current password
+    if not current_user.check_password(current):
+        flash('Senha atual incorreta.', 'error')
+        return redirect(request.referrer or url_for('index'))
+
+    if newp != confirm:
+        flash('Nova senha e confirmação não correspondem.', 'error')
+        return redirect(request.referrer or url_for('index'))
+
+    if len(newp) < 6:
+        flash('A nova senha deve ter ao menos 6 caracteres.', 'error')
+        return redirect(request.referrer or url_for('index'))
+
+    current_user.set_password(newp)
+    current_user.reset_required = False
+    db.session.commit()
+    flash('Senha alterada com sucesso.', 'success')
+    return redirect(request.referrer or url_for('index'))
+
 # --- TI Admin Panel ---
 @app.route('/admin')
 @login_required
 def admin_panel():
-    if not current_user.is_admin:
+    # Allow TI sector or explicit admin flag
+    if not (current_user.is_admin or current_user.sector == 'TI'):
         flash('Acesso negado. Apenas TI pode acessar este painel.', 'error')
         return redirect(url_for('index'))
     users = User.query.order_by(User.id.desc()).all()
@@ -468,7 +504,7 @@ def admin_panel():
 @app.route('/admin/approve/<int:user_id>', methods=['POST'])
 @login_required
 def admin_approve(user_id):
-    if not current_user.is_admin:
+    if not (current_user.is_admin or current_user.sector == 'TI'):
         flash('Acesso negado.', 'error')
         return redirect(url_for('index'))
     user = User.query.get_or_404(user_id)
@@ -481,19 +517,19 @@ def admin_approve(user_id):
 @app.route('/admin/toggle_active/<int:user_id>', methods=['POST'])
 @login_required
 def admin_toggle_active(user_id):
-    if not current_user.is_admin:
+    if not (current_user.is_admin or current_user.sector == 'TI'):
         flash('Acesso negado.', 'error')
         return redirect(url_for('index'))
     user = User.query.get_or_404(user_id)
     user.active = not user.active
     db.session.commit()
-    flash(f'Usuário {user.email} agora está {'ativo' if user.active else 'bloqueado'}.', 'success')
+    flash(f"Usuário {user.email} agora está {'ativo' if user.active else 'bloqueado'}.", 'success')
     return redirect(url_for('admin_panel'))
 
 @app.route('/admin/reset_password/<int:user_id>', methods=['POST'])
 @login_required
 def admin_reset_password(user_id):
-    if not current_user.is_admin:
+    if not (current_user.is_admin or current_user.sector == 'TI'):
         flash('Acesso negado.', 'error')
         return redirect(url_for('index'))
     user = User.query.get_or_404(user_id)
@@ -519,8 +555,8 @@ with app.app_context():
 @app.route('/report')
 @login_required
 def report():
-    if not (current_user.is_admin or current_user.sector in ['Almoxarifado', 'Compras']):
-        flash('Acesso negado. Apenas Almoxarifado, Compras e TI podem visualizar relatórios.', 'error')
+    if not (current_user.sector in ['Almoxarifado', 'Compras']):
+        flash('Acesso negado. Apenas Almoxarifado e Compras podem visualizar relatórios.', 'error')
         return redirect(url_for('index'))
 
     period = request.args.get('period', 'all')

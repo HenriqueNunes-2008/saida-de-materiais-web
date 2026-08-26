@@ -11,24 +11,29 @@
   <div class="app-shell">
     <aside class="sidebar">
       <div class="logo-area">
-        <div class="logo-placeholder">LOGO</div>
-        <h3>FlexiMedical</h3>
+        <img src="static/LogoFlexcolor.png" style="width: 100px; height: auto;" alt="Logo FlexiMedical">
       </div>
       <nav class="nav">
         <ul>
-          {% if current_user.is_authenticated and current_user.sector != 'Compras' %}
-            <li><a href="{{ url_for('index') }}">Saída</a></li>
-          {% endif %}
-          <li><a href="{{ url_for('report') }}">Relatório</a></li>
-          {% if current_user.is_authenticated and current_user.is_admin %}
-          <li><a href="{{ url_for('admin_panel') }}">Painel TI</a></li>
+          {% if current_user.is_authenticated and (current_user.sector == 'TI' or current_user.is_admin) %}
+            <li><a href="{{ url_for('admin_panel') }}">Usuários</a></li>
+          {% else %}
+            {% if current_user.is_authenticated and current_user.sector == 'Almoxarifado' %}
+              <li><a href="{{ url_for('index') }}">Saída</a></li>
+              <li><a href="{{ url_for('report') }}">Relatório</a></li>
+            {% elif current_user.is_authenticated and current_user.sector == 'Compras' %}
+              <li><a href="{{ url_for('report') }}">Relatório</a></li>
+            {% endif %}
           {% endif %}
         </ul>
       </nav>
       <div class="sidebar-footer">
         {% if current_user.is_authenticated %}
           <div class="user-line">{{ current_user.name }} <span class="muted">({{ current_user.sector }})</span></div>
-          <a class="btn small" href="{{ url_for('logout') }}">Sair</a>
+          <div class="sidebar-actions">
+            <button id="openSettings" class="btn small" title="Configurações">⚙️</button>
+            <a class="btn small" href="{{ url_for('logout') }}">Sair</a>
+          </div>
         {% endif %}
       </div>
     </aside>
@@ -42,5 +47,60 @@
       </section>
     </main>
   </div>
+
+  <!-- Settings modal (change own password) -->
+  <div id="settingsModal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <button class="close" id="closeSettings">×</button>
+      <h3>Redefinir Senha</h3>
+      <form method="POST" action="{{ url_for('change_password') }}" id="changePasswordForm">
+        <label>Digite a Senha Atual</label>
+        <div class="password-field">
+          <input type="password" name="current_password" id="currentPassword" required />
+          <button type="button" class="eye" data-target="currentPassword">👁️</button>
+        </div>
+
+        <label>Digite a Nova Senha</label>
+        <div class="password-field">
+          <input type="password" name="new_password" id="newPassword" required />
+          <button type="button" class="eye" data-target="newPassword">👁️</button>
+        </div>
+
+        <label>Confirme a Nova Senha</label>
+        <div class="password-field">
+          <input type="password" name="confirm_password" id="confirmPassword" required />
+          <button type="button" class="eye" data-target="confirmPassword">👁️</button>
+        </div>
+
+        <div style="margin-top:12px; text-align:right;">
+          <button type="button" class="btn secondary" id="cancelSettings">Cancelar</button>
+          <button type="submit" class="btn primary">Alterar Senha</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Settings modal logic
+    const settingsModal = document.getElementById('settingsModal');
+    const openSettings = document.getElementById('openSettings');
+    const closeSettings = document.getElementById('closeSettings');
+    const cancelSettings = document.getElementById('cancelSettings');
+
+    function showSettings(){ settingsModal.style.display = 'block'; settingsModal.setAttribute('aria-hidden','false'); }
+    function hideSettings(){ settingsModal.style.display = 'none'; settingsModal.setAttribute('aria-hidden','true'); }
+
+    if(openSettings) openSettings.addEventListener('click', (e)=>{ e.preventDefault(); showSettings(); });
+    if(closeSettings) closeSettings.addEventListener('click', (e)=>{ e.preventDefault(); hideSettings(); });
+    if(cancelSettings) cancelSettings.addEventListener('click', (e)=>{ e.preventDefault(); hideSettings(); });
+
+    // Toggle password visibility for all .eye buttons
+    document.querySelectorAll('.eye').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = document.getElementById(btn.dataset.target);
+        if (target) target.type = target.type === 'password' ? 'text' : 'password';
+      });
+    });
+  </script>
 </body>
 </html>
