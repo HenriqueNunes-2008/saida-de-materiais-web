@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user, UserMixin
+from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.security import generate_password_hash, check_password_hash
-import csv
-from openpyxl import Workbook, load_workbook  # type: ignore
+from io import BytesIO
+from openpyxl import Workbook  # type: ignore
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side  # type: ignore
 from datetime import datetime, timedelta
 import os
@@ -139,54 +140,87 @@ def get_report_suggestions():
     return suggestion_map
 
 
-def registrar_em_excel(dados):
-    nome_arquivo = obter_nome_arquivo_excel()
+def registrar_saida(dados):
+    recorded_by = current_user.id if current_user.is_authenticated else None
+    material_output = MaterialOutput(
+        employee_name=dados[1],
+        project_name=dados[2],
+        material=dados[3],
+        quantity=int(dados[4]),
+        recorded_by=recorded_by,
+    )
+    db.session.add(material_output)
+    db.session.commit()
 
-    if not os.path.exists(nome_arquivo):
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Saídas"
 
-        # Cabeçalhos
-        headers = ["Data/Hora", "Nome", "Projeto", "Material", "Quantidade"]
-        ws.append(headers)
-        
-        # Formatar cabeçalhos usando constantes
-        for col in range(1, len(headers) + 1):
-            cell = ws.cell(row=1, column=col)
-            cell.font = HEADER_FONT
-            cell.fill = HEADER_FILL
-            cell.alignment = ALIGN_CENTER
-            cell.border = BORDER_THIN
-            ws.column_dimensions[cell.column_letter].width = 25
+def gerar_excel(material_outputs):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Saídas"
 
-    else:
-        wb = load_workbook(nome_arquivo)
-        ws = wb["Saídas"]
+    headers = ["Data/Hora", "Nome", "Projeto", "Material", "Quantidade"]
+    ws.append(headers)
 
-    nova_linha = ws.max_row + 1
-    for col, valor in enumerate(dados, start=1):
-        cell = ws.cell(row=nova_linha, column=col, value=valor)
-        cell.alignment = ALIGN_CENTER
-        cell.border = BORDER_THIN
+    # Estilos do seu formatar_excel.py
+    fonte_negrito = Font(bold=True)
+    preenchimento_cabecalho = PatternFill(
+        start_color="BDD7EE",
+        end_color="BDD7EE",
+        fill_type="solid"
+    )
+    alinhamento_centralizado = Alignment(
+        horizontal="center",
+        vertical="center"
+    )
+    borda_fina = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
 
-    wb.save(nome_arquivo)
+    # Cabeçalho
+    for cell in ws[1]:
+        cell.font = fonte_negrito
+        cell.fill = preenchimento_cabecalho
+        cell.alignment = alinhamento_centralizado
+        cell.border = borda_fina
 
-    # If using DB, also persist the output record
-    if DATABASE_URL:
-        try:
-            # recorded_by could be determined by current_user if available
-            recorded_by = current_user.id if current_user.is_authenticated else None
-            emp_name = dados[1]
-            proj_name = dados[2]
-            material = dados[3]
-            quantidade = int(dados[4])
-            mo = MaterialOutput(employee_name=emp_name, project_name=proj_name, material=material, quantity=quantidade, recorded_by=recorded_by)
-            db.session.add(mo)
-            db.session.commit()
-        except Exception as e:
-            # Do not break the user flow if DB insert fails; log to console
-            print('Erro ao persistir saída no DB:', e)
+    # Dados
+    for material_output in material_outputs:
+        row = [
+            material_output.created_at.strftime("%d/%m/%Y %H:%M:%S")
+            if material_output.created_at else "",
+            material_output.employee_name,
+            material_output.project_name or "",
+            material_output.material,
+            material_output.quantity,
+        ]
+
+        ws.append(row)
+
+        for cell in ws[ws.max_row]:
+            cell.alignment = alinhamento_centralizado
+            cell.border = borda_fina
+
+    # Largura das colunas
+    colunas = {
+        "A": 20,
+        "B": 20,
+        "C": 25,
+        "D": 30,
+        "E": 12,
+    }
+
+    for col, largura in colunas.items():
+        ws.column_dimensions[col].width = largura
+
+    # Gera o arquivo na memória
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return output
 
 # --- Routes ---
 @app.route("/", methods=["GET", "POST"])
@@ -227,7 +261,12 @@ def index():
         data = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         registro = [data, nome, projeto, material, quantidade]
 
-        registrar_em_excel(registro)  # Grava no Excel
+        try:
+            registrar_saida(registro)
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash("Não foi possível registrar a saída. Tente novamente.", "error")
+            return redirect(url_for("index"))
 
         flash("Saída registrada com sucesso!", "success")
         return redirect(url_for("index"))
@@ -251,18 +290,64 @@ def index():
 @app.route('/download_excel')
 @login_required
 def download_excel():
-    # Apenas Almoxarifado e Compras aprovados podem baixar o arquivo xlsx
-    if not (current_user.sector in ['Almoxarifado', 'Compras']):
+    # Apenas Almoxarifado e Compras podem baixar o Excel
+    if current_user.sector not in ['Almoxarifado', 'Compras']:
         flash('Acesso negado ao download.', 'error')
         return redirect(url_for('index'))
 
-    arquivo = obter_nome_arquivo_excel()
-    if not os.path.exists(arquivo):
-        flash('Arquivo Excel não encontrado.', 'error')
-        return redirect(url_for('index'))
+    try:
+        # Mês atual
+        agora = datetime.now()
+        inicio_mes = datetime(agora.year, agora.month, 1)
 
-    from flask import send_file
-    return send_file(arquivo, as_attachment=True)
+        # Primeiro dia do próximo mês
+        if agora.month == 12:
+            inicio_proximo_mes = datetime(agora.year + 1, 1, 1)
+        else:
+            inicio_proximo_mes = datetime(
+                agora.year,
+                agora.month + 1,
+                1
+            )
+
+        # Busca somente os registros do mês atual no Neon
+        material_outputs = (
+            MaterialOutput.query
+            .filter(
+                MaterialOutput.created_at >= inicio_mes,
+                MaterialOutput.created_at < inicio_proximo_mes
+            )
+            .order_by(MaterialOutput.created_at.asc())
+            .all()
+        )
+
+        # Gera a planilha mensal
+        excel_file = gerar_excel(material_outputs)
+
+        nome_arquivo = (
+            f"saida_materiais_"
+            f"{agora.year}_"
+            f"{agora.month:02}.xlsx"
+        )
+
+        return send_file(
+            excel_file,
+            as_attachment=True,
+            download_name=nome_arquivo,
+            mimetype=(
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
+            ),
+        )
+
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash(
+            'Não foi possível gerar o arquivo Excel. '
+            'Tente novamente.',
+            'error'
+        )
+        return redirect(url_for('index'))
 
 # --- Lists and helper endpoints (names / projects) ---
 @app.route('/add_nome', methods=['POST'])
