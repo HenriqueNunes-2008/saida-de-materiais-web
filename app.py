@@ -686,6 +686,7 @@ def report():
         'report.html',
         material_outputs=material_outputs,
         suggestions=suggestions,
+        can_edit=current_user.sector == 'Almoxarifado',
         title='Relatório',
         filters={
             'period': period,
@@ -696,6 +697,101 @@ def report():
             'employee': employee_filter,
         }
     )
+
+
+def almoxarifado_required():
+    """Restrict material-output mutations to the Almoxarifado sector."""
+    if current_user.sector != 'Almoxarifado':
+        flash('Acesso negado. Apenas o Almoxarifado pode alterar saídas.', 'error')
+        return False
+    return True
+
+
+@app.route('/saida/<int:output_id>/editar', methods=['GET', 'POST'])
+@login_required
+def edit_output(output_id):
+    if not almoxarifado_required():
+        return redirect(url_for('report'))
+
+    material_output = MaterialOutput.query.get_or_404(output_id)
+
+    if request.method == 'POST':
+        employee_name = request.form.get('employee_name', '').strip()
+        project_name = request.form.get('project_name', '').strip()
+        material = request.form.get('material', '').strip()
+        quantity = request.form.get('quantity', '').strip()
+
+        if not all([employee_name, project_name, material, quantity]):
+            flash('Preencha todos os campos da saída.', 'error')
+            return render_template(
+                'edit_output.html',
+                material_output=material_output,
+                nomes=get_nomes(),
+                projetos=get_projetos(),
+                title='Editar Saída',
+            )
+
+        try:
+            quantity_int = int(quantity)
+            if quantity_int <= 0:
+                raise ValueError
+        except ValueError:
+            flash('Quantidade deve ser um número inteiro positivo.', 'error')
+            return render_template(
+                'edit_output.html',
+                material_output=material_output,
+                nomes=get_nomes(),
+                projetos=get_projetos(),
+                title='Editar Saída',
+            )
+
+        material_output.employee_name = employee_name
+        material_output.project_name = project_name
+        material_output.material = material
+        material_output.quantity = quantity_int
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash('Não foi possível atualizar a saída. Tente novamente.', 'error')
+            return render_template(
+                'edit_output.html',
+                material_output=material_output,
+                nomes=get_nomes(),
+                projetos=get_projetos(),
+                title='Editar Saída',
+            )
+
+        flash('Saída atualizada com sucesso.', 'success')
+        return redirect(url_for('report'))
+
+    return render_template(
+        'edit_output.html',
+        material_output=material_output,
+        nomes=get_nomes(),
+        projetos=get_projetos(),
+        title='Editar Saída',
+    )
+
+
+@app.route('/saida/<int:output_id>/excluir', methods=['POST'])
+@login_required
+def delete_output(output_id):
+    if not almoxarifado_required():
+        return redirect(url_for('report'))
+
+    material_output = MaterialOutput.query.get_or_404(output_id)
+    try:
+        db.session.delete(material_output)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Não foi possível excluir a saída. Tente novamente.', 'error')
+        return redirect(url_for('report'))
+
+    flash('Saída excluída com sucesso.', 'success')
+    return redirect(url_for('report'))
 
 
 if __name__ == "__main__":

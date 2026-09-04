@@ -232,6 +232,13 @@ table th { background: linear-gradient(90deg,var(--primary),var(--primary-dark))
 .table-wrap { overflow-x:auto; }
 .report-table { margin-top:0; }
 .empty-state { margin:8px 0 0; color: var(--gray); }
+.table-actions { white-space: nowrap; }
+.table-actions form { display: inline; }
+.table-actions .btn,
+.table-actions .delete-btn { margin: 2px; }
+.edit-output-panel { max-width: 760px; margin: 0 auto; }
+.edit-output-actions { grid-column: 2; display: flex; gap: 10px; justify-content: flex-end; }
+.edit-output-actions .btn { border: 1px solid transparent; }
 
 .btn.small { padding:6px 8px; font-size:0.9em; margin-left:6px }
 
@@ -377,4 +384,3 @@ table th { background: linear-gradient(90deg,var(--primary),var(--primary-dark))
     .auth-header { align-items: flex-start; }
     .forgot-actions { flex-direction: column; }
 }
-

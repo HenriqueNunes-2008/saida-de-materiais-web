@@ -1,0 +1,55 @@
+{% extends 'base_fragment.html' %}
+{% block content %}
+<div class="panel edit-output-panel">
+  <div class="report-header">
+    <div>
+      <h2>Editar Saída</h2>
+      <p class="muted-text">Atualize os dados da saída de material.</p>
+    </div>
+    <a class="btn secondary" href="{{ url_for('report') }}">Voltar ao relatório</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="messages">
+        {% for category, message in messages %}
+          <li class="{{ category }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST" class="output-form">
+    <label for="employee_name">Funcionário</label>
+    <select id="employee_name" name="employee_name" required>
+      {% if material_output.employee_name not in nomes %}
+        <option value="{{ material_output.employee_name }}" selected>{{ material_output.employee_name }}</option>
+      {% endif %}
+      {% for nome in nomes %}
+        <option value="{{ nome }}" {% if nome == material_output.employee_name %}selected{% endif %}>{{ nome }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="project_name">Projeto</label>
+    <select id="project_name" name="project_name" required>
+      {% if material_output.project_name and material_output.project_name not in projetos %}
+        <option value="{{ material_output.project_name }}" selected>{{ material_output.project_name }}</option>
+      {% endif %}
+      {% for projeto in projetos %}
+        <option value="{{ projeto }}" {% if projeto == material_output.project_name %}selected{% endif %}>{{ projeto }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="material">Material</label>
+    <input type="text" id="material" name="material" value="{{ material_output.material }}" required>
+
+    <label for="quantity">Quantidade</label>
+    <input type="number" id="quantity" name="quantity" min="1" value="{{ material_output.quantity }}" required>
+
+    <div class="edit-output-actions">
+      <a class="btn secondary" href="{{ url_for('report') }}">Cancelar</a>
+      <button type="submit" class="btn primary">Salvar alterações</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
