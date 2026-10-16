@@ -1,0 +1,1 @@
+document.addEventListener('DOMContentLoaded',()=>{const unit=document.getElementById('unit'),qty=document.getElementById('quantity');if(!unit||!qty)return;const change=()=>{const whole=['UN','CX'].includes(unit.value);qty.step=whole?'1':'0.001';qty.min=whole?'1':'0.001';};unit.addEventListener('change',change);change();});

@@ -20,6 +20,7 @@
   {% endwith %}
 
   <form method="POST" class="output-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="employee_name">Funcionário</label>
     <select id="employee_name" name="employee_name" required>
       {% if material_output.employee_name not in nomes %}

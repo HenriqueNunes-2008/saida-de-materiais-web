@@ -1,0 +1,8 @@
+{% extends 'base_fragment.html' %}{% block content %}<div class="panel estoque-panel"><div class="estoque-header"><div><h2>Editar produto — {{ product.code }}</h2><p class="muted-text">Alterações de preço valem apenas para operações futuras.</p></div><a class="btn secondary" href="{{ url_for('estoque') }}">Voltar</a></div>
+{% include 'estoque_messages.html' %}<form class="estoque-form" method="post" action="{{ url_for('editar_produto',product_id=product.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+<label>Código</label><input value="{{ product.code }}" disabled>
+<label for="description">Descrição</label><input name="description" id="description" value="{{ product.description }}" required>
+<label for="unit">Unidade</label><select id="unit" name="unit" required>{% for u in ['UN','CX','KG','M'] %}<option value="{{ u }}" {% if product.stock_unit == u %}selected{% endif %}>{{ u }}</option>{% endfor %}</select>
+<p class="muted-text">Para preservar o histórico, não é permitido alterar a unidade de um produto que já tenha movimentações.</p>
+<label for="price">Preço por {{ product.stock_unit }} (R$)</label><input id="price" name="price" value="{{ product.last_unit_price if product.last_unit_price is not none else '' }}" inputmode="decimal" required>
+<button class="btn primary" type="submit">Salvar alterações</button></form></div>{% endblock %}

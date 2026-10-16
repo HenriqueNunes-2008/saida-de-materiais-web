@@ -1,0 +1,10 @@
+{% extends 'base_fragment.html' %}{% block content %}
+<div class="panel estoque-panel"><div class="estoque-header"><div><h2>Cadastrar produto</h2><p class="muted-text">Cadastre o produto com uma unidade única para entradas, saídas e devoluções.</p></div><a class="btn secondary" href="{{ url_for('estoque') }}">Voltar</a></div>
+{% include 'estoque_messages.html' %}<form method="post" class="estoque-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+<label for="code">Código</label><input id="code" name="code" required maxlength="100">
+<label for="description">Descrição</label><input id="description" name="description" required maxlength="500">
+<label for="unit">Unidade de movimentação</label><select name="unit" id="unit" required><option value="UN">UN — Unidade</option><option value="CX">CX — Caixa</option><option value="KG">KG — Quilograma</option><option value="M">M — Metro</option></select>
+<label for="quantity">Quantidade inicial</label><input id="quantity" name="quantity" type="number" min="0.001" step="1" required>
+<label for="price">Preço por unidade cadastrada (R$)</label><input id="price" name="price" inputmode="decimal" required placeholder="Ex.: 25,00">
+<p class="muted-text">UN e CX aceitam somente inteiros; KG e M aceitam até três casas decimais.</p><button class="btn primary" type="submit">Cadastrar produto</button></form></div>
+<script src="{{ url_for('static', filename='unidades.js') }}" defer></script>{% endblock %}

@@ -384,3 +384,88 @@ table th { background: linear-gradient(90deg,var(--primary),var(--primary-dark))
     .auth-header { align-items: flex-start; }
     .forgot-actions { flex-direction: column; }
 }
+
+/* Controle de Estoque 2.0 */
+.estoque-panel{padding:24px;max-width:1200px;margin:auto}.estoque-header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.estoque-stats{display:flex;gap:16px;flex-wrap:wrap;margin:22px 0}.estoque-stat{flex:1;min-width:185px;padding:18px;border:1px solid var(--border);border-radius:12px;background:#fff;display:flex;flex-direction:column;gap:8px}.estoque-stat span{color:var(--gray);font-size:13px}.estoque-stat strong{font-size:22px;color:var(--navy)}.estoque-form{display:flex;flex-direction:column;gap:10px;max-width:560px}.estoque-form input,.estoque-form select,.estoque-form textarea,.estoque-search input{width:100%;padding:12px;border:1px solid #aab6c5;border-radius:8px;font:inherit;background:white}.estoque-form label,.estoque-search label{font-weight:600;margin-top:8px}.estoque-form button{align-self:flex-start;margin-top:12px}.estoque-search{margin:20px 0}.estoque-search>div{display:flex;gap:10px;margin-top:8px}.estoque-table-wrap{overflow-x:auto}.estoque-table{width:100%;border-collapse:collapse;background:white}.estoque-table th,.estoque-table td{padding:12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}.estoque-table th{background:#eaf2f8;color:var(--navy)}.estoque-sections{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin:24px 0}.estoque-section{padding:18px;border:1px solid var(--border);border-radius:12px;background:#fff}@media(max-width:640px){.estoque-panel{padding:14px}.estoque-search>div{flex-direction:column}}
+
+/* Etapa 2.6: ações claras no estoque */
+.estoque-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.estoque-actions .btn{white-space:nowrap;padding:9px 12px;text-decoration:none;font-size:13px}.estoque-detail-actions{margin:20px 0}.estoque-single-form{margin-top:22px;max-width:650px}.estoque-table td a:not(.btn){color:#43148b;text-decoration:underline}
+
+/* Etapa 2.8 — tokens Design System Fleximedical/Kure 1.0 */
+:root{--fk-primaria:#3C1276;--fk-secundaria:#145392;--fk-destaque:#4CBDE0;--fk-laranja:#FF7E02;--fk-azul-escuro:#002960;--fk-cinza:#657788;--fk-sucesso:#198754;--fk-atencao:#F59E0B;--fk-erro:#DC3545;--fk-radius-sm:6px;--fk-radius-md:8px;--fk-radius-lg:12px;--fk-space-1:4px;--fk-space-2:8px;--fk-space-3:12px;--fk-space-4:16px;--fk-space-5:24px;--fk-space-6:32px}
+body,button,input,select,textarea{font-family:Montserrat,Arial,sans-serif}
+.btn,button[type=submit]{border-radius:var(--fk-radius-md);transition:background .16s ease,box-shadow .16s ease,transform .16s ease}
+.btn.primary,button.btn.primary{background:var(--fk-primaria);color:white}
+.btn.primary:hover{background:#2c0b59}
+.btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--fk-secundaria);outline-offset:2px}
+.panel,.estoque-section,.estoque-stat{border-radius:var(--fk-radius-lg)}
+.estoque-table th,.report-table th{background:#eaf2f8;color:var(--fk-azul-escuro);font-weight:600}
+.estoque-table td,.report-table td{vertical-align:middle}
+.estoque-table tr:hover td,.report-table tr:hover td{background:#f8fbff}
+.estoque-form input:disabled{background:#eef2f5;color:var(--fk-cinza)}
+.status-chip{display:inline-block;padding:5px 9px;border-radius:var(--fk-radius-sm);font-size:12px;font-weight:600;white-space:nowrap}
+.status-neutral{background:#edf1f5;color:#425569}.status-warning{background:#fff3d6;color:#855400}.status-success{background:#e0f5e9;color:#176b41}
+.return-details{margin-top:8px;min-width:190px}.return-details summary{cursor:pointer;color:var(--fk-secundaria);font-weight:600}.return-details p{white-space:normal;line-height:1.45;font-size:12px}
+.report-panel .table-wrap{overflow-x:auto;max-width:100%}.report-table{min-width:1450px}
+.report-table td,.report-table th{padding:11px 12px}
+@media(max-width:720px){.report-panel{padding:14px}.report-header{display:flex;flex-direction:column;align-items:flex-start;gap:12px}}
+
+/* Etapa 2.9 — interface responsiva e filtros do Controle */
+html,body{max-width:100%;overflow-x:clip}
+
+/* Autocomplete do campo Material na Saída */
+.material-autocomplete{position:relative;width:100%;min-width:0}
+.material-autocomplete input[type="search"]{box-sizing:border-box;width:100%;max-width:100%;padding:12px;border:1px solid #aab6c5;border-radius:8px;font:inherit;background:#fff}
+.material-autocomplete input[type="search"]:focus{outline:2px solid #4CBDE0;outline-offset:1px;border-color:#3C1276}
+.material-suggestions{position:absolute;z-index:30;top:calc(100% + 4px);left:0;right:0;max-height:280px;overflow-y:auto;overflow-x:hidden;margin:0;padding:4px;list-style:none;background:#fff;border:1px solid #d5dce5;border-radius:8px;box-shadow:0 8px 24px #00296024}
+.material-suggestions[hidden]{display:none}
+.material-suggestion{display:flex;flex-direction:column;gap:4px;min-width:0;padding:10px 12px;border-radius:6px;cursor:pointer}
+.material-suggestion:hover,.material-suggestion.is-active{background:#f0eafb;outline:0}
+.material-suggestion-title{color:#3C1276;font-weight:600;overflow-wrap:anywhere}
+.material-suggestion-details{color:#657788;font-size:.875rem;overflow-wrap:anywhere}
+.material-suggestion-message{padding:12px;color:#657788}
+.material-suggestion-message.loading{color:#145392}
+.material-suggestion-message.error{color:#DC3545}
+@media(max-width:640px){.material-suggestions{max-height:40vh}}
+.output-form{grid-template-columns:140px minmax(0,1fr);align-items:center;column-gap:var(--fk-space-4);row-gap:var(--fk-space-3);min-width:0}
+.output-form>select,.output-form>.material-autocomplete,.output-form>input[type="number"]{width:100%;min-width:0}
+.output-form>input[type="number"]{padding:12px;border:1px solid var(--fk-cinza);border-radius:var(--fk-radius-md);font:inherit}
+.output-form>label[for="quantidade"]{grid-row:4;grid-column:1}
+.output-form>#quantidade{grid-row:4;grid-column:2}
+.output-form>#output_preview{grid-row:5;grid-column:1/-1;width:100%;min-width:0;margin:0;color:var(--fk-cinza);overflow-wrap:anywhere}
+.output-form>button[type="submit"],.output-form>.muted-inline{grid-column:2;justify-self:start;max-width:100%}
+.sidebar-actions .logout-form{display:inline-grid;grid-template-columns:minmax(0,1fr);gap:0}
+.sidebar-actions .logout-form>button{grid-column:1}
+@media(max-width:520px){.output-form{grid-template-columns:minmax(0,1fr);row-gap:var(--fk-space-2)}.output-form>label{text-align:left}.output-form>label[for="quantidade"],.output-form>#quantidade,.output-form>#output_preview{grid-row:auto}.output-form>select,.output-form>.material-autocomplete,.output-form>input[type="number"],.output-form>#output_preview,.output-form>button[type="submit"],.output-form>.muted-inline{grid-column:1}}
+.app-shell{width:100%;max-width:100%;min-width:0}
+.sidebar{flex:0 0 220px;min-width:0}
+.main-area,.main-content,.panel{min-width:0;max-width:100%}
+.main-area{width:calc(100% - 220px)}
+.main-content{width:100%;padding:clamp(12px,2vw,24px)}
+.estoque-panel{max-width:100%;width:100%;padding:clamp(14px,2vw,24px)}
+.estoque-filters{margin:20px 0 24px}
+.estoque-filters .filter-grid{grid-template-columns:minmax(220px,2fr) repeat(2,minmax(150px,1fr))}
+.estoque-filters .filter-field{min-width:0}
+.estoque-filters .filter-field input,.estoque-filters .filter-field select{min-width:0}
+.estoque-table-wrap,.report-panel .table-wrap{max-width:100%;width:100%;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.estoque-table{table-layout:auto;min-width:0}
+.estoque-table th,.estoque-table td{white-space:normal;overflow-wrap:anywhere}
+.estoque-table td:last-child{min-width:190px}
+.estoque-actions{flex-wrap:wrap}
+.report-table{min-width:1250px}
+.logo-area img,.auth-header img,.brand-logo{max-width:100%;height:auto;object-fit:contain}
+.brand-logo{width:140px;display:block;margin:0 auto 18px}
+.report-header,.estoque-header{min-width:0;flex-wrap:wrap}
+.estoque-stats{min-width:0}
+@media(max-width:960px){.estoque-filters .filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.estoque-filters .filter-field-search{grid-column:1/-1}}
+@media(max-width:720px){.app-shell{display:block}.sidebar{width:100%;padding:12px 16px}.sidebar .nav ul{display:flex;gap:8px;flex-wrap:wrap}.sidebar .nav a{margin:0}.sidebar-footer{margin-top:8px}.main-area{width:100%}.main-header{padding:12px 16px}.main-content{padding:12px}.estoque-filters .filter-grid{grid-template-columns:1fr}.estoque-filters .filter-field-search{grid-column:auto}.estoque-stats{display:grid;grid-template-columns:1fr}.estoque-stat{min-width:0}.estoque-table{min-width:620px}.estoque-table th,.estoque-table td{white-space:nowrap}.filter-actions{justify-content:stretch}.filter-actions .btn{flex:1}}
+
+/* Etapa 2.10 — Indicadores associados aos filtros do Controle */
+.estoque-dashboard-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; margin:22px 0 12px; }
+.estoque-dashboard-heading h3 { margin:0 0 6px; color:#1A345B; font-size:20px; font-weight:600; }
+.estoque-dashboard-heading p { margin:0; font-size:13px; }
+.estoque-filter-badge { display:inline-flex; align-items:center; padding:6px 10px; border-radius:6px; color:#145392; background:#e8f4fa; font-size:12px; font-weight:600; }
+.estoque-stats-dashboard { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr)); gap:16px; }
+.estoque-stats-dashboard .estoque-stat { min-width:0; }
+.estoque-stats-dashboard .estoque-stat strong { overflow-wrap:anywhere; }
+.estoque-stat-quantity { border-color:#4CBDE0; }

@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
-    <div class="container">
+    <div class="container standalone-list"><img class="brand-logo" src="{{ url_for('static', filename='LogoFlexcolor.png') }}" alt="Fleximedical / Kure">
         <h1>Nomes e Projetos Cadastrados</h1>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -27,6 +27,7 @@
             <div class="item">
                 <span>{{ nome }}</span>
                 <form method="POST" action="{{ url_for('delete_nome', nome=nome) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <button type="submit" class="delete-btn" onclick="return confirm('Tem certeza que deseja excluir este nome?')">Excluir</button>
                 </form>
             </div>
@@ -39,6 +40,7 @@
             <div class="item">
                 <span>{{ projeto }}</span>
                 <form method="POST" action="{{ url_for('delete_projeto', projeto=projeto) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <button type="submit" class="delete-btn" onclick="return confirm('Tem certeza que deseja excluir este projeto?')">Excluir</button>
                 </form>
             </div>

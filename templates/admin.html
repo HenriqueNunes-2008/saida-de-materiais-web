@@ -13,6 +13,13 @@
           {% endif %}
         {% endwith %}
 
+        {% if reset_credential %}
+          <div class="messages success" role="status">
+            Senha temporária de {{ reset_credential.email }} (exibida somente nesta resposta):
+            <code>{{ reset_credential.password }}</code>
+          </div>
+        {% endif %}
+
         <table>
             <thead>
                 <tr>
@@ -38,12 +45,15 @@
                     <td>{{ 'Sim' if u.reset_required else 'Não' }}</td>
                     <td>
                         <form style="display:inline" method="POST" action="{{ url_for('admin_approve', user_id=u.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                             <button type="submit" class="btn small">Aprovar</button>
                         </form>
                         <form style="display:inline" method="POST" action="{{ url_for('admin_toggle_active', user_id=u.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                             <button type="submit" class="btn small">Ativar/Bloquear</button>
                         </form>
                         <form style="display:inline" method="POST" action="{{ url_for('admin_reset_password', user_id=u.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                             <button type="submit" class="btn small">Redefinir Senha</button>
                         </form>
                     </td>

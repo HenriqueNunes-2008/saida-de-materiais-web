@@ -11,7 +11,7 @@
   <div class="app-shell">
     <aside class="sidebar">
       <div class="logo-area">
-        <img src="static/LogoFlexcolor.png" style="width: 100px; height: auto;" alt="Logo FlexiMedical">
+        <img src="{{ url_for('static', filename='LogoFlexcolor.png') }}" style="width: 100px; height: auto;" alt="Logo FlexiMedical">
       </div>
       <nav class="nav">
         <ul>
@@ -20,8 +20,10 @@
           {% else %}
             {% if current_user.is_authenticated and current_user.sector == 'Almoxarifado' %}
               <li><a href="{{ url_for('index') }}">Saída</a></li>
+              <li><a href="{{ url_for('estoque') }}">Controle</a></li>
               <li><a href="{{ url_for('report') }}">Relatório</a></li>
             {% elif current_user.is_authenticated and current_user.sector == 'Compras' %}
+              <li><a href="{{ url_for('estoque') }}">Controle</a></li>
               <li><a href="{{ url_for('report') }}">Relatório</a></li>
             {% endif %}
           {% endif %}
@@ -32,7 +34,7 @@
           <div class="user-line">{{ current_user.name }} <span class="muted">({{ current_user.sector }})</span></div>
           <div class="sidebar-actions">
             <button id="openSettings" class="btn small" title="Configurações">⚙️</button>
-            <a class="btn small" href="{{ url_for('logout') }}">Sair</a>
+            <form method="POST" action="{{ url_for('logout') }}" class="logout-form"><input type="hidden" name="csrf_token" value="{{ csrf_value() }}"><button type="submit" class="btn small">Sair</button></form>
           </div>
         {% endif %}
       </div>
@@ -54,6 +56,7 @@
       <button class="close" id="closeSettings">×</button>
       <h3>Redefinir Senha</h3>
       <form method="POST" action="{{ url_for('change_password') }}" id="changePasswordForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_value() }}">
         <label>Digite a Senha Atual</label>
         <div class="password-field">
           <input type="password" name="current_password" id="currentPassword" required />

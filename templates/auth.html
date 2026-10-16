@@ -12,7 +12,7 @@
   <main class="auth-shell">
     <section class="auth-modal" aria-live="polite">
       <div class="auth-header">
-        <img src="static/LogoFlexcolor.png" style="width: 100px; height: auto;" alt="Logo FlexiMedical">
+        <img src="{{ url_for('static', filename='LogoFlexcolor.png') }}" style="width: 100px; height: auto;" alt="Logo FlexiMedical">
         <div>
           <p class="eyebrow">FlexiMedical / Kure</p>
           <h1>Controle de Saídas</h1>
@@ -31,6 +31,7 @@
 
       <div id="loginPane" class="auth-pane active">
         <form method="POST" action="/login" id="loginForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_value() }}">
           <label>Email</label>
           <input type="email" name="email" id="loginEmail" placeholder="seuemail@empresa.com" required />
 
@@ -51,6 +52,7 @@
 
       <div id="registerPane" class="auth-pane">
         <form method="POST" action="/register">
+          <input type="hidden" name="csrf_token" value="{{ csrf_value() }}">
           <label>Nome</label>
           <input type="text" name="name" placeholder="Seu nome completo" required />
 
@@ -82,6 +84,7 @@
         <p class="forgot-message">Informe o e-mail cadastrado para solicitar a redefinição; o TI receberá a solicitação.</p>
 
         <form method="POST" action="/forgot" id="forgotForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_value() }}">
           <label for="forgotEmail">E-mail</label>
           <input type="email" name="forgot_email" id="forgotEmail" placeholder="seuemail@empresa.com" required />
         </form>
@@ -101,6 +104,7 @@
       <h3>Solicitar Redefinição de Senha</h3>
       <p class="forgot-message">Para confirmar a redefinição da sua senha, uma solicitação será enviada ao TI para revisão.</p>
       <form method="POST" action="/forgot" id="forgotFormModal">
+        <input type="hidden" name="csrf_token" value="{{ csrf_value() }}">
         <label for="forgotEmailModalInput">E-mail</label>
         <input type="email" name="forgot_email" id="forgotEmailModalInput" placeholder="seuemail@empresa.com" required />
         <div style="margin-top:12px; text-align:right;">

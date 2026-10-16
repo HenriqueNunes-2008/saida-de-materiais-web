@@ -1,0 +1,26 @@
+{% extends 'base_fragment.html' %}{% block content %}
+<div class="panel estoque-panel"><div class="estoque-header"><div><h2>Controle de Estoque</h2><p class="muted-text">Produtos cadastrados e saldos disponíveis.</p></div>{% if current_user.sector == 'Almoxarifado' %}<a class="btn primary" href="{{ url_for('cadastro_produto') }}">+ Cadastrar produto</a>{% endif %}</div>
+{% include 'estoque_messages.html' %}
+<div class="estoque-dashboard-heading">
+  <div><h3>Resumo do estoque{% if has_filters %} filtrado{% endif %}</h3><p class="muted-text">Os indicadores consideram todos os produtos que correspondem aos filtros, inclusive além dos 200 exibidos na tabela.</p></div>
+  {% if has_filters %}<span class="estoque-filter-badge">Filtros aplicados</span>{% endif %}
+</div>
+<div class="estoque-stats estoque-stats-dashboard">
+  <div class="estoque-stat"><span>Produtos encontrados</span><strong>{{ total_products }}</strong></div>
+  <div class="estoque-stat"><span>Valor em estoque (custo médio)</span><strong>R$ {{ '%.2f'|format(total_value)|replace('.', ',') }}</strong></div>
+  <div class="estoque-stat"><span>Valor pelo último preço</span><strong>R$ {{ '%.2f'|format(last_value)|replace('.', ',') }}</strong></div>
+  <div class="estoque-stat"><span>Produtos sem saldo</span><strong>{{ zero_products }}</strong></div>
+  {% if selected_unit %}<div class="estoque-stat estoque-stat-quantity"><span>Quantidade total em {{ selected_unit }}</span><strong>{{ total_quantity|qtd }} {{ selected_unit }}</strong></div>{% endif %}
+</div>
+<form class="report-filters estoque-filters" method="get" action="{{ url_for('estoque') }}">
+  <div class="filter-panel">
+    <div class="filter-title">Filtros de produtos</div>
+    <div class="filter-grid">
+      <div class="filter-field filter-field-search"><label for="q">Código ou descrição</label><input id="q" name="q" value="{{ search }}" placeholder="Ex.: 237 ou parafuso"></div>
+      <div class="filter-field"><label for="unit">Unidade</label><select id="unit" name="unit"><option value="">Todas</option>{% for u in ['UN','CX','KG','M'] %}<option value="{{ u }}" {% if selected_unit==u %}selected{% endif %}>{{ u }} — {{ {'UN':'Unidade','CX':'Caixa','KG':'Quilograma','M':'Metro'}[u] }}</option>{% endfor %}</select></div>
+      <div class="filter-field"><label for="status">Situação</label><select id="status" name="status">{% for value,label in [('all','Todos'),('active','Ativos'),('inactive','Inativos'),('positive','Com saldo'),('zero','Sem saldo')] %}<option value="{{ value }}" {% if selected_status==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="filter-actions"><a class="btn secondary" href="{{ url_for('estoque') }}">Limpar</a><button class="btn primary" type="submit">Aplicar filtros</button></div>
+  </div>
+</form>
+<div class="estoque-table-wrap"><table class="estoque-table"><thead><tr><th>Código</th><th>Descrição</th><th>Unidade</th><th>Saldo</th><th>Custo médio</th><th>Valor em estoque</th>{% if current_user.sector == 'Almoxarifado' %}<th>Ações</th>{% endif %}</tr></thead><tbody>{% for product in products %}<tr><td>{{ product.code }}</td><td><a href="{{ url_for('detalhe_produto', product_id=product.id) }}">{{ product.description }}</a></td><td>{{ product.stock_unit }}</td><td>{{ product.stock_quantity|qtd }}</td><td>R$ {{ '%.2f'|format(product.average_unit_cost)|replace('.', ',') }}</td><td>R$ {{ '%.2f'|format(product.stock_quantity * product.average_unit_cost)|replace('.', ',') }}</td>{% if current_user.sector == 'Almoxarifado' %}<td><div class="estoque-actions"><a class="btn primary" href="{{ url_for('nova_entrada_produto', product_id=product.id) }}">Nova Entrada</a><a class="btn secondary" href="{{ url_for('formulario_editar_produto', product_id=product.id) }}">Editar</a></div></td>{% endif %}</tr>{% else %}<tr><td colspan="{{ 7 if current_user.sector == 'Almoxarifado' else 6 }}">Nenhum produto encontrado.</td></tr>{% endfor %}</tbody></table></div><p class="muted-text">{% if current_user.sector == 'Compras' %}Consulta somente leitura. {% endif %}Exibindo {{ displayed_count }} de {{ total_products }} produtos encontrados (máximo de 200 por consulta).</p></div>{% endblock %}
