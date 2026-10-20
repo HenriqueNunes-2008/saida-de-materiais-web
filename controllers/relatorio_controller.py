@@ -1,10 +1,11 @@
 from flask import render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_login import login_user, logout_user, login_required, current_user
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
-from models import User, Employee, Project, MaterialOutput
+from models import User, Employee, Project, MaterialOutput, StockMovement
 from services.legacy_service import get_nomes, get_projetos, get_report_suggestions, registrar_saida, gerar_excel
 import secrets
 from services.relatorio_financeiro import valores_historicos
@@ -21,6 +22,9 @@ def report():
     project_filter = request.args.get('project', '').strip()
     material_filter = request.args.get('material', '').strip()
     employee_filter = request.args.get('employee', '').strip()
+    return_filter = request.args.get('returns', 'all').strip()
+    if return_filter not in ('all', 'with_returns', 'without_returns'):
+        return_filter = 'all'
 
     query = MaterialOutput.query
 
@@ -30,6 +34,15 @@ def report():
         query = query.filter(MaterialOutput.material.contains(material_filter))
     if employee_filter:
         query = query.filter(MaterialOutput.employee_name.contains(employee_filter))
+    if return_filter != 'all':
+        returned_outputs = select(StockMovement.original_output_id).where(
+            StockMovement.movement_type == 'ESTORNO_SAIDA',
+            StockMovement.original_output_id.is_not(None),
+        ).distinct()
+        if return_filter == 'with_returns':
+            query = query.filter(MaterialOutput.id.in_(returned_outputs))
+        else:
+            query = query.filter(~MaterialOutput.id.in_(returned_outputs))
 
     now = datetime.now()
     if period == '7d':
@@ -67,6 +80,7 @@ def report():
             'project': project_filter,
             'material': material_filter,
             'employee': employee_filter,
+            'returns': return_filter,
         }
     )
 

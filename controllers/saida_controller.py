@@ -70,8 +70,13 @@ def index():
             can_download = True
         # TI (is_admin) does not get saída/report access in the main UI
 
-    nomes_list = get_nomes()
-    projetos_list = get_projetos()
+    try:
+        nomes_list = get_nomes()
+        projetos_list = get_projetos()
+    except SQLAlchemyError:
+        db.session.rollback()
+        nomes_list, projetos_list = [], []
+        flash('A tela abriu, mas não foi possível carregar os cadastros de nomes e projetos. Verifique as tabelas employee e project no banco de desenvolvimento.', 'error')
     return render_template("index.html", nomes=nomes_list, projetos=projetos_list,
                            csrf_token=csrf_token(), current_user=current_user,
                            can_edit=can_edit, can_download=can_download, title='Saída de Materiais')

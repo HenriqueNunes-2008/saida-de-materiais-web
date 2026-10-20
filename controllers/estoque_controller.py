@@ -7,7 +7,7 @@ from sqlalchemy import select, func, case
 from sqlalchemy.exc import SQLAlchemyError
 from extensions import db
 from models import Product, StockMovement
-from services.estoque_service import create_product, register_simple_entry, edit_product, get_returnable, register_return, StockValidationError
+from services.estoque_service import create_product, register_simple_entry, edit_product, get_returnable, register_return, StockValidationError, UNITS, reorder_status
 
 def estoque_read_required(fn):
     @wraps(fn)
@@ -40,7 +40,7 @@ def estoque():
     term = request.args.get('q', '').strip()
     unit = request.args.get('unit', '').strip().upper()
     status = request.args.get('status', 'all').strip()
-    if unit not in ('', 'UN', 'CX', 'KG', 'M'):
+    if unit not in ('', *UNITS):
         unit = ''
     if status not in ('all', 'active', 'inactive', 'positive', 'zero'):
         status = 'all'
@@ -77,7 +77,13 @@ def estoque():
             func.coalesce(func.sum(filtered.c.stock_quantity), 0).label('total_quantity'),
         )
     ).one()
-    products = db.session.execute(query.limit(200)).scalars().all()
+    status_products = db.session.execute(query).scalars().all()
+    status_counts = {'Normal': 0, 'Reposição necessária': 0, 'Estoque crítico': 0, 'Não configurado': 0, 'Saldo pendente de conferência': 0}
+    for item in status_products:
+        label = reorder_status(item)
+        status_counts[label] = status_counts.get(label, 0) + 1
+    products = status_products[:200]
+    statuses = {p.id: reorder_status(p) for p in products}
     # Só somamos quantidades quando todas compartilham a mesma unidade.
     # Caso contrário, somar metros, caixas e quilos não tem significado.
     total_quantity = summary.total_quantity if unit else None
@@ -88,7 +94,7 @@ def estoque():
         total_value=summary.total_value or zero,
         last_value=summary.last_value or zero,
         zero_products=summary.zero_products,
-        total_quantity=total_quantity,
+        total_quantity=total_quantity, reorder_statuses=statuses, status_counts=status_counts,
         has_filters=bool(term or unit or status != 'all'),
         displayed_count=len(products),
         title='Controle de Estoque', csrf_token=csrf_token()
@@ -100,7 +106,8 @@ def cadastro_produto():
         try:
             create_product(request.form.get('code'), request.form.get('description'),
                            request.form.get('unit'), request.form.get('quantity'),
-                           request.form.get('price'), current_user.id)
+                           request.form.get('price'), current_user.id,
+                           request.form.get('minimum_stock'), request.form.get('reorder_point'))
             flash('Produto cadastrado e saldo inicial registrado com sucesso.', 'success')
             return redirect(url_for('estoque'))
         except StockValidationError as exc:
@@ -151,7 +158,7 @@ def editar_produto(product_id):
     verify_csrf()
     try:
         edit_product(product_id, request.form.get('description'), request.form.get('unit'),
-                     request.form.get('price'))
+                     request.form.get('price'), request.form.get('minimum_stock'), request.form.get('reorder_point'))
         flash('Dados cadastrais atualizados.', 'success')
     except StockValidationError as exc:
         db.session.rollback()

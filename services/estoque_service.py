@@ -10,7 +10,10 @@ SIX = Decimal('0.000001')
 THREE = Decimal('0.001')
 MAX_QTY = Decimal('999999999999999.999')
 MAX_MOVEMENT_TOTAL = Decimal('99999999999999.999999')
-UNITS = ('UN', 'CX', 'KG', 'M')
+UNITS = ('UN', 'CX', 'KG', 'M', 'PC', 'MT', 'PT', 'BR', 'CH', 'PA', 'LT', 'JG', 'CJ', 'RL', 'CT')
+# Na planilha, UM é uma anotação equivalente a UN; o código salvo no sistema é UN.
+IMPORT_UNIT_MAP = {'UM': 'UN'}
+FRACTIONAL_UNITS = ('KG', 'M', 'MT', 'LT')
 
 def search_active_products(term, limit=10):
     """Busca produtos ativos por código ou descrição, sem diferenciar maiúsculas."""
@@ -47,8 +50,9 @@ def clean_field(raw, label, maximum):
 
 def valid_unit(raw):
     value = clean_field(raw, 'Unidade', 20).upper()
+    value = IMPORT_UNIT_MAP.get(value, value)
     if value not in UNITS:
-        raise StockValidationError('Unidade inválida. Utilize UN, CX, KG ou M.')
+        raise StockValidationError('Unidade inválida. Utilize uma unidade disponível no cadastro.')
     return value
 
 def valid_quantity(raw, unit):
@@ -58,7 +62,7 @@ def valid_quantity(raw, unit):
         raise StockValidationError('Informe uma quantidade numérica válida.')
     if not value.is_finite() or value <= 0 or value > MAX_QTY or value.as_tuple().exponent < -3:
         raise StockValidationError('A quantidade deve ser positiva e ter no máximo três casas decimais.')
-    if unit in ('UN', 'CX') and value != value.to_integral_value():
+    if unit not in FRACTIONAL_UNITS and value != value.to_integral_value():
         raise StockValidationError(f'A unidade {unit} exige quantidade inteira.')
     return value
 
@@ -92,17 +96,22 @@ def add_entry(product, kind, qty, price, actor_id, notes):
     product.last_purchase_price=price
     product.updated_at=datetime.now(timezone.utc)
 
-def create_product(code, description, unit, quantity, price, actor_id):
+def create_product(code, description, unit, quantity, price, actor_id, minimum_stock=None, reorder_point=None):
     code=clean_field(code,'Código',100)
     description=clean_field(description,'Descrição',500)
     unit=valid_unit(unit)
     qty=valid_quantity(quantity,unit)
     price=valid_price(price)
+    minimum_stock=valid_stock_limit(minimum_stock, 'Estoque mínimo', unit)
+    reorder_point=valid_stock_limit(reorder_point, 'Gatilho de reposição', unit)
+    if minimum_stock is not None and reorder_point is not None and reorder_point < minimum_stock:
+        raise StockValidationError('O gatilho deve ser maior ou igual ao estoque mínimo.')
     if db.session.execute(select(Product.id).where(Product.code==code)).first():
         raise StockValidationError('Código já cadastrado.')
     try:
         product=Product(code=code,description=description,unit=unit,purchase_unit=unit,
-            stock_unit=unit,conversion_factor=1,stock_quantity=Decimal('0'),average_unit_cost=Decimal('0'))
+            stock_unit=unit,conversion_factor=1,stock_quantity=Decimal('0'),average_unit_cost=Decimal('0'),
+            minimum_stock=minimum_stock,reorder_point=reorder_point)
         db.session.add(product);db.session.flush()
         add_entry(product,'SALDO_INICIAL',qty,price,actor_id,'Cadastro inicial')
         db.session.commit()
@@ -124,10 +133,14 @@ def register_simple_entry(product_id, quantity, actor_id):
     except Exception:
         db.session.rollback();raise
 
-def edit_product(product_id, description, unit, price):
+def edit_product(product_id, description, unit, price, minimum_stock=None, reorder_point=None):
     description=clean_field(description,'Descrição',500)
     unit=valid_unit(unit)
     price=valid_price(price)
+    minimum_stock=valid_stock_limit(minimum_stock, 'Estoque mínimo', unit)
+    reorder_point=valid_stock_limit(reorder_point, 'Gatilho de reposição', unit)
+    if minimum_stock is not None and reorder_point is not None and reorder_point < minimum_stock:
+        raise StockValidationError('O gatilho deve ser maior ou igual ao estoque mínimo.')
     try:
         product=db.session.execute(select(Product).where(Product.id==product_id).with_for_update()).scalar_one_or_none()
         if not product or not product.active:raise StockValidationError('Produto não encontrado ou inativo.')
@@ -137,10 +150,37 @@ def edit_product(product_id, description, unit, price):
         product.description=description;product.unit=unit;product.purchase_unit=unit
         product.stock_unit=unit;product.conversion_factor=1
         product.last_unit_price=price;product.last_purchase_price=price
+        product.minimum_stock=minimum_stock;product.reorder_point=reorder_point
         product.updated_at=datetime.now(timezone.utc)
         db.session.commit()
     except Exception:
         db.session.rollback();raise
+
+def valid_stock_limit(raw, label, unit=None):
+    if raw is None or not str(raw).strip():
+        return None
+    try:
+        value = Decimal(str(raw).strip().replace(',', '.'))
+    except (InvalidOperation, ValueError, TypeError):
+        raise StockValidationError(f'{label} deve ser numérico.')
+    if not value.is_finite() or value < 0 or value > MAX_QTY or value.as_tuple().exponent < -3:
+        raise StockValidationError(f'{label} deve ser não negativo e ter até três casas decimais.')
+    if unit and unit not in FRACTIONAL_UNITS and value != value.to_integral_value():
+        raise StockValidationError(f'{label} deve ser inteiro para a unidade {unit}.')
+    return value
+
+def reorder_status(product):
+    if getattr(product, 'stock_pending_review', False):
+        return 'Saldo pendente de conferência'
+    minimum, trigger = product.minimum_stock, product.reorder_point
+    if minimum is None and trigger is None:
+        return 'Não configurado'
+    qty = Decimal(product.stock_quantity or 0)
+    if minimum is not None and qty <= Decimal(minimum):
+        return 'Estoque crítico'
+    if trigger is not None and qty <= Decimal(trigger):
+        return 'Reposição necessária'
+    return 'Normal'
 
 def get_returnable(output_id):
     output=db.session.get(MaterialOutput,output_id)

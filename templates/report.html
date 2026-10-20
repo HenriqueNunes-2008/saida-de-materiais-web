@@ -1,15 +1,102 @@
-{% extends 'base_fragment.html' %}{% block content %}
-<div class="panel report-panel"><div class="report-header"><div><h2>Relatório de Saídas</h2><p class="muted-text">Consulte saídas, devoluções e valores líquidos por projeto.</p></div><a class="btn primary" href="{{ url_for('download_excel') }}">Baixar Excel mensal</a></div>
-<form method="get" action="{{ url_for('report') }}" class="report-filters"><div class="filter-panel"><div class="filter-title">Filtros</div><div class="filter-grid">
-<div class="filter-field"><label for="period">Período</label><select id="period" name="period">{% for value,label in [('all','Todos'),('7d','Últimos 7 dias'),('30d','Últimos 30 dias'),('custom','Personalizado')] %}<option value="{{ value }}" {% if filters.period==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-<div class="filter-field"><label for="start_date">Data inicial</label><input type="date" id="start_date" name="start_date" value="{{ filters.start_date }}"></div>
-<div class="filter-field"><label for="end_date">Data final</label><input type="date" id="end_date" name="end_date" value="{{ filters.end_date }}"></div>
-<div class="filter-field"><label for="project">Projeto</label><input id="project" name="project" value="{{ filters.project }}" placeholder="Projeto"></div>
-<div class="filter-field"><label for="material">Material</label><input id="material" name="material" value="{{ filters.material }}" placeholder="Código"></div>
-<div class="filter-field"><label for="employee">Funcionário</label><input id="employee" name="employee" value="{{ filters.employee }}" placeholder="Funcionário"></div></div>
-<div class="filter-actions"><a class="btn secondary" href="{{ url_for('report') }}">Limpar</a><button class="btn primary" type="submit">Aplicar filtros</button></div></div></form>
-{% if material_outputs %}<div class="table-wrap"><table class="report-table"><thead><tr><th>Data</th><th>Funcionário</th><th>Projeto</th><th>Material</th><th>Qtd. original</th><th>Un.</th><th>Qtd. estornada</th><th>Qtd. líquida</th><th>Preço unitário</th><th>Valor original</th><th>Valor estornado</th><th>Valor líquido</th><th>Situação</th>{% if can_edit %}<th>Ações</th>{% endif %}</tr></thead><tbody>
-{% for m in material_outputs %}{% set f=valores.get(m.id) %}<tr><td>{{ m.created_at.strftime('%d/%m/%Y %H:%M') if m.created_at else '—' }}</td><td>{{ m.employee_name }}</td><td>{{ m.project_name or '—' }}</td><td>{{ m.material }}</td><td>{{ m.quantity|qtd }}</td><td>{{ f.unit if f else '—' }}</td><td>{{ f.returned_qty|qtd if f else '—' }}</td><td>{{ f.net_qty|qtd if f else '—' }}</td><td>{% if f %}R$ {{ '%.6f'|format(f.unit_price)|replace('.',',') }}{% else %}—{% endif %}</td><td>{% if f %}R$ {{ '%.2f'|format(f.total_value)|replace('.',',') }}{% else %}—{% endif %}</td><td>{% if f %}R$ {{ '%.2f'|format(f.returned_value)|replace('.',',') }}{% else %}—{% endif %}</td><td>{% if f %}R$ {{ '%.2f'|format(f.net_value)|replace('.',',') }}{% else %}—{% endif %}</td>
-<td>{% if f %}<span class="status-chip {{ 'status-success' if f.status=='Estorno total' else 'status-warning' if f.status=='Estorno parcial' else 'status-neutral' }}">{{ f.status }}</span>{% if f.returns %}<details class="return-details"><summary>Ver estornos ({{ f.returns|length }})</summary>{% for r in f.returns %}<p>{{ r.date.strftime('%d/%m/%Y %H:%M') if r.date else '' }} — {{ r.quantity|qtd }} {{ f.unit }} — {{ r.reason }}</p>{% endfor %}</details>{% endif %}{% else %}<span class="status-chip status-neutral">Legado sem preço</span>{% endif %}</td>
-{% if can_edit %}<td class="table-actions">{% if m.product_id is not none %}{% if f and f.net_qty>0 %}<a class="btn small" href="{{ url_for('estornar_saida',output_id=m.id) }}">Devolver</a>{% else %}—{% endif %}{% else %}<a class="btn small" href="{{ url_for('edit_output',output_id=m.id) }}">Editar</a>{% endif %}</td>{% endif %}</tr>{% endfor %}</tbody></table></div>
-{% else %}<p class="empty-state">Nenhuma saída encontrada.</p>{% endif %}</div>{% endblock %}
+{% extends 'base_fragment.html' %}
+{% block content %}
+<div class="panel report-panel">
+  <div class="report-header">
+    <div>
+      <h2>Relatório de Saídas</h2>
+      <p class="muted-text">Consulte saídas, devoluções e valores líquidos por projeto.</p>
+    </div>
+    <a class="btn primary" href="{{ url_for('download_excel') }}">Baixar Excel mensal</a>
+  </div>
+
+  <form method="get" action="{{ url_for('report') }}" class="report-filters">
+    <div class="filter-panel">
+      <div class="filter-title">Filtros</div>
+      <div class="filter-grid">
+        <div class="filter-field">
+          <label for="period">Período</label>
+          <select id="period" name="period">
+            {% for value,label in [('all','Todos'),('7d','Últimos 7 dias'),('30d','Últimos 30 dias'),('custom','Personalizado')] %}
+            <option value="{{ value }}" {% if filters.period==value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-field"><label for="start_date">Data inicial</label><input type="date" id="start_date" name="start_date" value="{{ filters.start_date }}"></div>
+        <div class="filter-field"><label for="end_date">Data final</label><input type="date" id="end_date" name="end_date" value="{{ filters.end_date }}"></div>
+        <div class="filter-field"><label for="project">Projeto</label><input id="project" name="project" value="{{ filters.project }}" placeholder="Projeto"></div>
+        <div class="filter-field"><label for="material">Material</label><input id="material" name="material" value="{{ filters.material }}" placeholder="Código ou material"></div>
+        <div class="filter-field"><label for="employee">Funcionário</label><input id="employee" name="employee" value="{{ filters.employee }}" placeholder="Funcionário"></div>
+        <div class="filter-field">
+          <label for="returns">Estornos</label>
+          <select id="returns" name="returns">
+            {% for value,label in [('all','Todos'),('with_returns','Com estorno'),('without_returns','Sem estorno')] %}
+            <option value="{{ value }}" {% if filters.returns==value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="filter-actions">
+        <a class="btn secondary" href="{{ url_for('report') }}">Limpar</a>
+        <button class="btn primary" type="submit">Aplicar filtros</button>
+      </div>
+    </div>
+  </form>
+
+  {% if material_outputs %}
+  <div class="report-scrollbar" id="report-scrollbar" role="region" aria-label="Rolagem horizontal da tabela" tabindex="0"><div id="report-scrollbar-content"></div></div>
+  <div class="table-wrap report-table-wrap" id="report-table-wrap">
+    <table class="report-table" id="report-table">
+      <thead><tr>
+        <th>Data</th><th>Funcionário</th><th>Projeto</th><th>Material</th>
+        <th>Qtd. original</th><th>Un.</th><th>Qtd. estornada</th><th>Qtd. líquida</th>
+        <th>Preço unitário</th><th>Valor original</th><th>Valor estornado</th><th>Valor líquido</th><th>Situação</th>
+        {% if can_edit %}<th>Ações</th>{% endif %}
+      </tr></thead>
+      <tbody>
+        {% for m in material_outputs %}
+        {% set f=valores.get(m.id) %}
+        <tr>
+          <td>{{ m.created_at.strftime('%d/%m/%Y %H:%M') if m.created_at else '—' }}</td>
+          <td>{{ m.employee_name }}</td><td>{{ m.project_name or '—' }}</td><td>{{ m.material }}</td>
+          <td>{{ m.quantity|qtd }}</td><td>{{ f.unit if f else '—' }}</td>
+          <td>{{ f.returned_qty|qtd if f else '—' }}</td><td>{{ f.net_qty|qtd if f else '—' }}</td>
+          <td>{% if f %}R$ {{ f.unit_price|br_num(6) }}{% else %}—{% endif %}</td>
+          <td>{% if f %}R$ {{ f.total_value|br_num }}{% else %}—{% endif %}</td>
+          <td>{% if f %}R$ {{ f.returned_value|br_num }}{% else %}—{% endif %}</td>
+          <td>{% if f %}R$ {{ f.net_value|br_num }}{% else %}—{% endif %}</td>
+          <td>
+            {% if f %}
+              <span class="status-chip {{ 'status-success' if f.status=='Estorno total' else 'status-warning' if f.status=='Estorno parcial' else 'status-neutral' }}">{{ f.status }}</span>
+              {% if f.returns %}<details class="return-details"><summary>Ver estornos ({{ f.returns|length }})</summary>{% for r in f.returns %}<p>{{ r.date.strftime('%d/%m/%Y %H:%M') if r.date else '' }} — {{ r.quantity|qtd }} {{ f.unit }} — {{ r.reason }}</p>{% endfor %}</details>{% endif %}
+            {% else %}<span class="status-chip status-neutral">Legado sem preço</span>{% endif %}
+          </td>
+          {% if can_edit %}<td class="table-actions">{% if m.product_id is not none %}{% if f and f.net_qty>0 %}<a class="btn small" href="{{ url_for('estornar_saida',output_id=m.id) }}">Devolver</a>{% else %}—{% endif %}{% else %}<a class="btn small" href="{{ url_for('edit_output',output_id=m.id) }}">Editar</a>{% endif %}</td>{% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <script>
+    (() => {
+      const bar = document.getElementById('report-scrollbar');
+      const barContent = document.getElementById('report-scrollbar-content');
+      const tableWrap = document.getElementById('report-table-wrap');
+      const table = document.getElementById('report-table');
+      if (!bar || !barContent || !tableWrap || !table) return;
+      const sizeBar = () => { barContent.style.width = `${table.scrollWidth}px`; };
+      let syncing = false;
+      const sync = (source, target) => {
+        if (syncing) return;
+        syncing = true;
+        target.scrollLeft = source.scrollLeft;
+        requestAnimationFrame(() => { syncing = false; });
+      };
+      sizeBar();
+      bar.addEventListener('scroll', () => sync(bar, tableWrap));
+      tableWrap.addEventListener('scroll', () => sync(tableWrap, bar));
+      window.addEventListener('resize', sizeBar);
+    })();
+  </script>
+  {% else %}<p class="empty-state">Nenhuma saída encontrada.</p>{% endif %}
+</div>
+{% endblock %}

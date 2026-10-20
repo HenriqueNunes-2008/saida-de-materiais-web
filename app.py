@@ -1,6 +1,6 @@
 """Flask entry point. Legacy endpoint names retained for template compatibility."""
 import os
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from flask import Flask
 from config import Config
 from extensions import db, login_manager
@@ -20,6 +20,17 @@ def create_app():
             return "—"
         number = Decimal(str(value))
         return format(number.quantize(Decimal("0.001")), "f").rstrip("0").rstrip(".").replace(".", ",") if number != 0 else "0"
+
+    @app.template_filter("br_num")
+    def format_brazilian_number(value, decimals=2):
+        """Formata numeros com ponto de milhar e virgula decimal."""
+        if value is None:
+            return "—"
+        places = max(0, min(int(decimals), 6))
+        number = Decimal(str(value))
+        quantum = Decimal(1).scaleb(-places)
+        localized = format(number.quantize(quantum, rounding=ROUND_HALF_UP), f",.{places}f")
+        return localized.replace(",", "\0").replace(".", ",").replace("\0", ".")
 
     db.init_app(app)
     login_manager.init_app(app)
