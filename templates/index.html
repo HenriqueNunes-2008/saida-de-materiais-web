@@ -1,4 +1,5 @@
 {% extends 'base_fragment.html' %}
+<!-- Pagina de saida de materiais, com campos e acoes liberados conforme o perfil. -->
 {% block content %}
 <div class="panel report-panel">
   <div class="report-header">
@@ -21,6 +22,7 @@
     {% endif %}
   {% endwith %}
 
+  <!-- Formulario operacional: produto selecionado, quantidade e validacao do saldo. -->
   <form method="POST" action="/" class="output-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="nome">Nome</label>
@@ -54,6 +56,7 @@
     {% endif %}
   </form>
 
+  <!-- Cadastros rapidos complementam as listas de pessoas e projetos. -->
   <div class="quick-actions">
     <h3>Cadastros Rápidos</h3>
     <div class="inline-forms">

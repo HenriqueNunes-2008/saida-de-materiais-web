@@ -1,3 +1,4 @@
+"""Rotas do controle de estoque, com acesso por perfil e alertas de reposicao."""
 from functools import wraps
 import secrets
 from decimal import Decimal
@@ -36,7 +37,40 @@ def verify_csrf():
     if not secrets.compare_digest(str(request.form.get('csrf_token', '')), csrf_token()):
         abort(400, description='Formulário expirado ou inválido. Atualize a página.')
 
+def obter_notificacoes_estoque():
+    """Agrupa cada produto ativo em seu alerta confirmado mais urgente."""
+    produtos = db.session.execute(
+        select(Product).where(Product.active.is_(True)).order_by(Product.code)
+    ).scalars().all()
+    grupos = [
+        {'titulo': 'Produtos sem saldo', 'produtos': []},
+        {'titulo': 'Produtos no estoque mínimo', 'produtos': []},
+        {'titulo': 'Produtos no gatilho de reposição', 'produtos': []},
+    ]
+
+    for produto in produtos:
+        # Saldo sem quantidade confirmada nao gera falso alerta de estoque zero.
+        if produto.stock_pending_review:
+            continue
+        saldo = Decimal(produto.stock_quantity or 0)
+        minimo = Decimal(produto.minimum_stock) if produto.minimum_stock is not None else None
+        gatilho = Decimal(produto.reorder_point) if produto.reorder_point is not None else None
+
+        # Cada produto aparece uma vez; saldo zero tem prioridade sobre mínimo e gatilho.
+        if saldo <= 0:
+            grupos[0]['produtos'].append(produto)
+        elif minimo is not None and saldo <= minimo:
+            grupos[1]['produtos'].append(produto)
+        elif gatilho is not None and saldo <= gatilho:
+            grupos[2]['produtos'].append(produto)
+
+    grupos_com_itens = [grupo for grupo in grupos if grupo['produtos']]
+    total = sum(len(grupo['produtos']) for grupo in grupos_com_itens)
+    return grupos_com_itens, total
+
+
 def estoque():
+    # Filtros afetam a lista; o sino sempre resume os alertas do estoque ativo inteiro.
     term = request.args.get('q', '').strip()
     unit = request.args.get('unit', '').strip().upper()
     status = request.args.get('status', 'all').strip()
@@ -68,9 +102,6 @@ def estoque():
             func.coalesce(func.sum(
                 filtered.c.stock_quantity * filtered.c.average_unit_cost
             ), 0).label('total_value'),
-            func.coalesce(func.sum(
-                filtered.c.stock_quantity * func.coalesce(filtered.c.last_unit_price, 0)
-            ), 0).label('last_value'),
             func.coalesce(func.sum(case(
                 (filtered.c.stock_quantity == 0, 1), else_=0
             )), 0).label('zero_products'),
@@ -78,7 +109,7 @@ def estoque():
         )
     ).one()
     status_products = db.session.execute(query).scalars().all()
-    status_counts = {'Normal': 0, 'Reposição necessária': 0, 'Estoque crítico': 0, 'Não configurado': 0, 'Saldo pendente de conferência': 0}
+    status_counts = {'Normal': 0, 'Reposição necessária': 0, 'Estoque crítico': 0, 'Sem gatilho': 0, 'Saldo pendente de conferência': 0}
     for item in status_products:
         label = reorder_status(item)
         status_counts[label] = status_counts.get(label, 0) + 1
@@ -87,14 +118,15 @@ def estoque():
     # Só somamos quantidades quando todas compartilham a mesma unidade.
     # Caso contrário, somar metros, caixas e quilos não tem significado.
     total_quantity = summary.total_quantity if unit else None
+    alert_groups, alert_count = obter_notificacoes_estoque()
     return render_template(
         'estoque.html', products=products, search=term,
         selected_unit=unit, selected_status=status,
         total_products=summary.total_products,
         total_value=summary.total_value or zero,
-        last_value=summary.last_value or zero,
         zero_products=summary.zero_products,
         total_quantity=total_quantity, reorder_statuses=statuses, status_counts=status_counts,
+        alert_groups=alert_groups, alert_count=alert_count,
         has_filters=bool(term or unit or status != 'all'),
         displayed_count=len(products),
         title='Controle de Estoque', csrf_token=csrf_token()
@@ -157,9 +189,11 @@ def entrada_produto(product_id):
 def editar_produto(product_id):
     verify_csrf()
     try:
-        edit_product(product_id, request.form.get('description'), request.form.get('unit'),
-                     request.form.get('price'), request.form.get('minimum_stock'), request.form.get('reorder_point'))
-        flash('Dados cadastrais atualizados.', 'success')
+        edit_product(product_id, request.form.get('description'), request.form.get('quantity'),
+                     request.form.get('price'), request.form.get('minimum_stock'),
+                     request.form.get('reorder_point'), current_user.id,
+                     request.form.get('confirm_stock') == 'yes')
+        flash('Produto atualizado. Se o saldo mudou, o ajuste ficou registrado no histórico.', 'success')
     except StockValidationError as exc:
         db.session.rollback()
         flash(str(exc), 'error')

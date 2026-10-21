@@ -1,3 +1,5 @@
+"""Controla o registro de saidas e a exportacao mensal para Excel."""
+
 from flask import render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy.exc import SQLAlchemyError
@@ -8,7 +10,8 @@ from models import User, Employee, Project, MaterialOutput, Product, StockMoveme
 from services.estoque_service import register_output, search_active_products, StockValidationError
 from controllers.estoque_controller import csrf_token, verify_csrf
 from sqlalchemy import select
-from services.legacy_service import get_nomes, get_projetos, get_report_suggestions, registrar_saida, gerar_excel
+from services.saida_service import get_nomes, get_projetos
+from services.excel_service import gerar_excel
 import secrets
 
 def almoxarifado_required():
@@ -18,7 +21,7 @@ def almoxarifado_required():
     return True
 
 def index():
-    # First screen: if not authenticated, show auth page (login / cadastro)
+    # Sem sessao autenticada, a primeira tela apresenta login e cadastro.
     if not current_user.is_authenticated:
         return render_template('auth.html')
 
@@ -68,7 +71,7 @@ def index():
             can_download = True
         elif current_user.sector == 'Compras':
             can_download = True
-        # TI (is_admin) does not get saída/report access in the main UI
+        # O perfil TI administra usuarios e nao recebe acesso as telas operacionais.
 
     try:
         nomes_list = get_nomes()

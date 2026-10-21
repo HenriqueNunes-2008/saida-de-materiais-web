@@ -1,3 +1,5 @@
+"""Aplica filtros e apresenta o relatorio historico de saidas."""
+
 from flask import render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy import select
@@ -6,7 +8,7 @@ from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
 from models import User, Employee, Project, MaterialOutput, StockMovement
-from services.legacy_service import get_nomes, get_projetos, get_report_suggestions, registrar_saida, gerar_excel
+from services.saida_service import get_report_suggestions
 import secrets
 from services.relatorio_financeiro import valores_historicos
 

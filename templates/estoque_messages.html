@@ -1,1 +1,2 @@
+<!-- Exibe mensagens de sucesso e validacao retornadas pelas rotas. -->
 {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<ul class="messages" role="status">{% for category, message in messages %}<li class="{{ category }}">{{ message }}</li>{% endfor %}</ul>{% endif %}{% endwith %}

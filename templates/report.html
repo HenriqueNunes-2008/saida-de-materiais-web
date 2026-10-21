@@ -1,4 +1,5 @@
 {% extends 'base_fragment.html' %}
+<!-- Relatorio de saidas com filtros, devolucoes, valores historicos e exportacao. -->
 {% block content %}
 <div class="panel report-panel">
   <div class="report-header">
@@ -9,6 +10,7 @@
     <a class="btn primary" href="{{ url_for('download_excel') }}">Baixar Excel mensal</a>
   </div>
 
+  <!-- Filtros combinaveis limitam periodo, projeto, material, funcionario e estornos. -->
   <form method="get" action="{{ url_for('report') }}" class="report-filters">
     <div class="filter-panel">
       <div class="filter-title">Filtros</div>
@@ -42,9 +44,11 @@
     </div>
   </form>
 
+  <!-- A rolagem superior e sincronizada com a tabela horizontal abaixo. -->
   {% if material_outputs %}
   <div class="report-scrollbar" id="report-scrollbar" role="region" aria-label="Rolagem horizontal da tabela" tabindex="0"><div id="report-scrollbar-content"></div></div>
   <div class="table-wrap report-table-wrap" id="report-table-wrap">
+    <!-- Valores e devolucoes sao apresentados a partir do historico financeiro. -->
     <table class="report-table" id="report-table">
       <thead><tr>
         <th>Data</th><th>Funcionário</th><th>Projeto</th><th>Material</th>

@@ -1,3 +1,4 @@
+// Atualiza a prévia de conversão da embalagem para a unidade de estoque.
 document.querySelectorAll('[data-conversion-form]').forEach((form) => {
   const purchase = form.querySelector('[data-purchase-unit]');
   const stock = form.querySelector('[data-stock-unit]');

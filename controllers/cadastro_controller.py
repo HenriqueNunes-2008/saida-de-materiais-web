@@ -1,3 +1,5 @@
+"""Gerencia cadastros auxiliares de funcionarios e projetos."""
+
 from flask import render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy.exc import SQLAlchemyError
@@ -5,7 +7,7 @@ from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
 from models import User, Employee, Project, MaterialOutput
-from services.legacy_service import get_nomes, get_projetos, get_report_suggestions, registrar_saida, gerar_excel
+from services.saida_service import get_nomes, get_projetos
 import secrets
 from controllers.estoque_controller import almox_required, csrf_token, verify_csrf
 

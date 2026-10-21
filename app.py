@@ -32,6 +32,16 @@ def create_app():
         localized = format(number.quantize(quantum, rounding=ROUND_HALF_UP), f",.{places}f")
         return localized.replace(",", "\0").replace(".", ",").replace("\0", ".")
 
+    @app.template_filter("decimal_input")
+    def format_decimal_input(value):
+        """Valor numerico compacto para campos HTML sem arredondar os dados."""
+        if value is None:
+            return ""
+        text = format(Decimal(str(value)), "f")
+        if "." in text:
+            text = text.rstrip("0").rstrip(".")
+        return text
+
     db.init_app(app)
     login_manager.init_app(app)
 

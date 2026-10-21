@@ -1,4 +1,4 @@
-<! -- Fragment: base layout wrapper used by internal panels -->
+<!-- Estrutura comum: navegacao, cabecalho, conteudo e modal de configuracoes. -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -50,7 +50,7 @@
     </main>
   </div>
 
-  <!-- Settings modal (change own password) -->
+  <!-- Modal para o usuario autenticado alterar a propria senha. -->
   <div id="settingsModal" class="modal" aria-hidden="true">
     <div class="modal-content">
       <button class="close" id="closeSettings">×</button>
@@ -84,7 +84,7 @@
   </div>
 
   <script>
-    // Settings modal logic
+    // Controla a abertura e o fechamento do modal de configuracoes.
     const settingsModal = document.getElementById('settingsModal');
     const openSettings = document.getElementById('openSettings');
     const closeSettings = document.getElementById('closeSettings');
@@ -97,7 +97,7 @@
     if(closeSettings) closeSettings.addEventListener('click', (e)=>{ e.preventDefault(); hideSettings(); });
     if(cancelSettings) cancelSettings.addEventListener('click', (e)=>{ e.preventDefault(); hideSettings(); });
 
-    // Toggle password visibility for all .eye buttons
+    // Alterna a visibilidade de cada campo de senha.
     document.querySelectorAll('.eye').forEach((btn) => {
       btn.addEventListener('click', () => {
         const target = document.getElementById(btn.dataset.target);

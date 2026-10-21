@@ -1,12 +1,48 @@
-{% extends 'base_fragment.html' %}{% block content %}
-<div class="panel estoque-panel"><div class="estoque-header"><div><h2>Cadastrar produto</h2><p class="muted-text">Cadastre o produto com uma unidade única para entradas, saídas e devoluções.</p></div><a class="btn secondary" href="{{ url_for('estoque') }}">Voltar</a></div>
-{% include 'estoque_messages.html' %}<form method="post" class="estoque-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-<label for="code">Código</label><input id="code" name="code" required maxlength="100">
-<label for="description">Descrição</label><input id="description" name="description" required maxlength="500">
-<label for="unit">Unidade de movimentação</label><select name="unit" id="unit" required>{% for u, label in [('UN','Unidade'),('CX','Caixa'),('KG','Quilograma'),('M','Metro'),('PC','Peça'),('MT','Metro'),('PT','Pacote'),('BR','Barra'),('CH','Chapa'),('PA','Par'),('LT','Litro'),('JG','Jogo'),('CJ','Conjunto'),('RL','Rolo'),('CT','Cartela')] %}<option value="{{ u }}">{{ u }} — {{ label }}</option>{% endfor %}</select>
-<label for="quantity">Quantidade inicial</label><input id="quantity" name="quantity" type="number" min="0.001" step="1" required>
-<label for="price">Preço por unidade cadastrada (R$)</label><input id="price" name="price" inputmode="decimal" required placeholder="Ex.: 25,00">
-<label for="minimum_stock">Estoque mínimo (opcional)</label><input id="minimum_stock" name="minimum_stock" type="number" min="0" step="0.001">
-<label for="reorder_point">Gatilho de reposição (opcional)</label><input id="reorder_point" name="reorder_point" type="number" min="0" step="0.001">
-<p class="muted-text">Somente KG, M, MT e LT aceitam frações, até três casas decimais. Limites vazios permanecem sem configuração.</p><button class="btn primary" type="submit">Cadastrar produto</button></form></div>
-<script src="{{ url_for('static', filename='unidades.js') }}" defer></script>{% endblock %}
+{% extends 'base_fragment.html' %}
+{% block content %}
+<!-- Cadastro cria uma unidade fixa para todas as movimentacoes futuras. -->
+<div class="panel estoque-panel">
+  <header class="estoque-header">
+    <div>
+      <h2>Cadastrar produto</h2>
+      <p class="muted-text">Cadastre o produto com uma unidade única para entradas, saídas e devoluções.</p>
+    </div>
+    <a class="btn secondary" href="{{ url_for('estoque') }}">Voltar</a>
+  </header>
+  {% include 'estoque_messages.html' %}
+
+  <form method="post" class="estoque-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="code">Código</label>
+    <input id="code" name="code" required maxlength="100">
+
+    <label for="description">Descrição</label>
+    <input id="description" name="description" required maxlength="500">
+
+    <!-- A descricao ao lado da sigla ajuda a escolher a unidade correta. -->
+    <label for="unit">Unidade de movimentação</label>
+    <select name="unit" id="unit" required>
+      {% for unidade, descricao in [('UN','Unidade'),('CX','Caixa'),('KG','Quilograma'),('M','Metro'),('PC','Peça'),('MT','Metro'),('PT','Pacote'),('BR','Barra'),('CH','Chapa'),('PA','Par'),('LT','Litro'),('JG','Jogo'),('CJ','Conjunto'),('RL','Rolo'),('CT','Cartela')] %}
+      <option value="{{ unidade }}">{{ unidade }} — {{ descricao }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="quantity">Quantidade inicial</label>
+    <input id="quantity" name="quantity" type="number" min="0.001" step="1" inputmode="decimal" required>
+
+    <label for="price">Preço por unidade cadastrada (R$)</label>
+    <input id="price" name="price" type="number" min="0" step="any" inputmode="decimal" required placeholder="Ex.: 25,00">
+
+    <!-- Limites vazios continuam sem configuracao e nao viram zero. -->
+    <label for="minimum_stock">Estoque mínimo (opcional)</label>
+    <input id="minimum_stock" name="minimum_stock" type="number" min="0" step="0.001" inputmode="decimal">
+
+    <label for="reorder_point">Gatilho de reposição (opcional)</label>
+    <input id="reorder_point" name="reorder_point" type="number" min="0" step="0.001" inputmode="decimal">
+
+    <p class="muted-text">Somente KG, M, MT e LT aceitam frações, até três casas decimais. O cadastro registra o saldo inicial no histórico.</p>
+    <button class="btn primary" type="submit">Cadastrar produto</button>
+  </form>
+</div>
+<script src="{{ url_for('static', filename='unidades.js') }}" defer></script>
+{% endblock %}

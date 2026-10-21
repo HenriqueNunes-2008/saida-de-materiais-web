@@ -1,3 +1,4 @@
+// Controla a busca acessível de materiais e valida a quantidade antes da saída.
 document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('material_search');
   const productId = document.getElementById('product_id');

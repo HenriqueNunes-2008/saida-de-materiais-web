@@ -1,125 +1,129 @@
-# Saída de Materiais - FlexiMedical / Kure
+# Sistema de Saída de Materiais
 
-Aplicação web para controle de saída de materiais com autenticação por perfil, permissões por setor e exportação de relatórios em Excel.
+Aplicação web em Flask para registrar saídas de materiais, controlar saldos e custos de estoque, acompanhar devoluções e consultar relatórios. A interface segue a identidade visual FlexiMedical/Kure.
 
-## Visão geral
+## Funcionalidades
 
-O sistema foi pensado para atender múltiplos perfis da empresa:
+- Autenticação, cadastro de usuários e aprovação de acesso.
+- Cadastro de produtos com código, descrição, unidade, preço, estoque mínimo e gatilho de reposição.
+- Registro de saldo inicial, entradas, saídas, ajustes de saldo e estornos, com histórico de movimentações.
+- Consulta de estoque com filtros por código ou descrição, unidade e situação.
+- Resumo de estoque calculado pelo custo médio e indicadores de reposição.
+- Notificações para produtos sem saldo, no estoque mínimo ou no gatilho de reposição. Saldos pendentes de conferência não são tratados como saldo físico confirmado nos alertas.
+- Relatórios de saídas com filtros por período, projeto, material, funcionário e estorno.
+- Exportação Excel das saídas do mês atual, incluindo quantidades e valores históricos de estornos.
+- Gerenciamento de usuários, aprovação, bloqueio e redefinição de senha por usuários autorizados.
 
-- Almoxarifado:
-  - registra saídas de materiais
-  - acessa a tela de registros
-  - exporta relatórios em Excel
-- Compras:
-  - visualiza saídas e relatórios
-  - baixa planilhas mensais
-  - não registra saídas
-- TI:
-  - gerencia usuários cadastrados
-  - aprova ou bloqueia contas
-  - redefine senhas
+## Perfis e permissões
 
-## Funcionalidades principais
+| Perfil | Permissões principais |
+| --- | --- |
+| Almoxarifado | Cadastrar e editar produtos, registrar entradas, saídas e estornos, consultar estoque e relatórios e exportar Excel. |
+| Compras | Consultar estoque e relatórios e exportar Excel. Não altera saldos nem cadastra produtos. |
+| TI ou administrador autorizado | Aprovar e bloquear contas e gerenciar solicitações de redefinição de senha. |
 
-- Login e cadastro com modal de autenticação
-- Fluxo de aprovação do TI para novos usuários
-- Controle de acesso por setor e perfil
-- Sidebar com navegação por área
-- Tela de relatório com filtros por:
-  - período
-  - projeto
-  - material
-  - funcionário
-- Download de planilhas Excel mensais
-- Fallback local em SQLite
-- Preparação para banco PostgreSQL/Neon em ambiente de produção
+O cadastro público aceita os setores Almoxarifado e Compras. Novas contas aguardam aprovação e ativação por TI ou por um usuário administrativo autorizado.
 
 ## Requisitos
 
-- Python 3.10+
-- pip
-- Dependências do arquivo `requirements.txt`
+- Python 3.10 ou superior.
+- pip.
+- Um banco de dados com o schema compatível com os modelos da aplicação: SQLite para desenvolvimento local ou PostgreSQL/Neon.
+
+As dependências estão listadas em [requirements.txt](requirements.txt). A aplicação não cria tabelas nem executa migrações automaticamente. Prepare o banco e aplique as migrações necessárias manualmente antes de iniciar o servidor.
 
 ## Configuração local
 
-1. Clone o repositório
-2. Crie um ambiente virtual:
+1. Crie e ative um ambiente virtual na raiz do projeto:
+
+   **Windows PowerShell**
+
+   ```powershell
+   python -m venv venv
+   .\venv\Scripts\Activate.ps1
+   ```
+
+   **Linux ou macOS**
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate
+   ```
+
+2. Instale as dependências:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Crie um arquivo `.env` na raiz do projeto. A configuração carrega esse arquivo e exige `SECRET_KEY` e `DATABASE_URL`. Para desenvolvimento com SQLite, use um banco local:
+
+   ```env
+   SECRET_KEY=troque-por-uma-chave-aleatoria
+   DATABASE_URL=sqlite:///saida_materiais_dev.db
+   SESSION_COOKIE_SECURE=false
+   ```
+
+   Gere uma chave aleatória com:
+
+   ```bash
+   python -c "import secrets; print(secrets.token_hex(32))"
+   ```
+
+   Copie o resultado para `SECRET_KEY`. O valor `SESSION_COOKIE_SECURE=false` permite testar em `http://127.0.0.1`; em produção, sirva a aplicação por HTTPS e mantenha o cookie seguro ativado.
+
+4. Prepare o schema do banco local antes da primeira execução. Para PostgreSQL/Neon, defina `DATABASE_URL` com a URL do banco de desenvolvimento apropriado. Não use credenciais de produção em desenvolvimento.
+
+5. Inicie a aplicação:
+
+   ```bash
+   python app.py
+   ```
+
+   Acesse `http://127.0.0.1:5000`.
+
+## Configuração e execução em produção
+
+Defina `SECRET_KEY` e `DATABASE_URL` no gerenciador de variáveis de ambiente do serviço de hospedagem. A URL pode ser fornecida no formato PostgreSQL; a aplicação ajusta o esquema para usar o driver `psycopg2` instalado pelos requisitos.
+
+O servidor WSGI incluído nos requisitos pode iniciar a aplicação com:
 
 ```bash
-python -m venv venv
+gunicorn app:app
 ```
 
-3. Ative o ambiente:
 
-Windows:
-```bash
-venv\Scripts\activate
-```
+## Telas e rotas principais
 
-Linux/macOS:
-```bash
-source venv/bin/activate
-```
+| Rota | Uso |
+| --- | --- |
+| `/` | Início, entrada no sistema e registro de saída conforme o perfil. |
+| `/estoque` | Consulta e resumo de produtos e saldos. |
+| `/estoque/cadastrar` | Cadastro de produto para Almoxarifado. |
+| `/estoque/<id>` | Detalhes do produto e histórico recente de movimentações. |
+| `/report` | Consulta de saídas, filtros e informações de estorno. |
+| `/download_excel` | Download das saídas do mês atual em Excel. |
+| `/admin` | Administração de usuários autorizada para TI ou administradores. |
 
-4. Instale as dependências:
+As ações que alteram dados exigem autenticação, autorização por perfil e token CSRF.
 
-```bash
-pip install -r requirements.txt
-```
-
-5. Configure as variáveis de ambiente:
-
-```bash
-copy .env.example .env
-```
-
-Edite o arquivo `.env` com os valores reais do projeto. A estrutura básica é:
-
-```env
-SECRET_KEY=sua_chave_secreta
-DATABASE_URL=
-ADMIN_EMAIL=ti@empresa.com
-ADMIN_PASSWORD=sua_senha_admin
-```
-
-Observações:
-- `DATABASE_URL` pode ficar vazio para usar SQLite localmente
-- em produção, o ideal é utilizar PostgreSQL/Neon em variável de ambiente do hosting
-
-## Execução
-
-```bash
-python app.py
-```
-
-A aplicação ficará disponível em:
-
-```text
-http://127.0.0.1:5000
-```
-
-## Estrutura de pastas
+## Estrutura do projeto
 
 ```text
 .
-├── app.py
-├── .env.example
-├── .gitignore
-├── README.md
-├── requirements.txt
-├── static/
-├── templates/
-├── formatar_excel.py
-├── start_app.bat
-└── venv/
+├── app.py                    # Inicialização do Flask, filtros e registro de rotas
+├── config.py                 # Configuração por variáveis de ambiente
+├── extensions.py             # SQLAlchemy e Flask-Login
+├── controllers/              # Rotas de autenticação, estoque, saídas e relatórios
+├── models/                   # Modelos ORM separados por entidade
+├── services/                 # Regras de estoque, saídas, relatórios e Excel
+├── templates/                # Páginas HTML e componentes Jinja
+├── static/                   # CSS, JavaScript e recursos visuais
+├── requirements.txt          # Dependências Python
+├── runtime.txt               # Versão de runtime indicada para hospedagem
+└── start_app.bat             # Inicialização auxiliar no Windows
 ```
-
-## Observações importantes
-
-- Arquivos sensíveis como `.env` e banco local não devem ser enviados para o repositório
-- O projeto usa SQLite por padrão em ambiente local e aceita `DATABASE_URL` para PostgreSQL/Neon
-- Planilhas geradas no runtime são arquivos temporários e devem ficar fora do controle de versionamento
 
 ## Licença
 
-Este projeto é destinado ao uso interno da organização e pode ser ajustado conforme regras internas da empresa.
+Aplicação destinada ao uso interno da organização.

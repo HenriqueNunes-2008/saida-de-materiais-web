@@ -1,27 +1,150 @@
-{% extends 'base_fragment.html' %}{% block content %}
-<div class="panel estoque-panel"><div class="estoque-header"><div><h2>Controle de Estoque</h2><p class="muted-text">Produtos cadastrados e saldos disponíveis.</p></div>{% if current_user.sector == 'Almoxarifado' %}<a class="btn primary" href="{{ url_for('cadastro_produto') }}">+ Cadastrar produto</a>{% endif %}</div>
-{% include 'estoque_messages.html' %}
-<div class="estoque-dashboard-heading">
-  <div><h3>Resumo do estoque{% if has_filters %} filtrado{% endif %}</h3><p class="muted-text">Os indicadores consideram todos os produtos que correspondem aos filtros, inclusive além dos 200 exibidos na tabela.</p></div>
-  {% if has_filters %}<span class="estoque-filter-badge">Filtros aplicados</span>{% endif %}
-</div>
-<div class="estoque-stats estoque-stats-dashboard">
-  <div class="estoque-stat"><span>Produtos encontrados</span><strong>{{ total_products }}</strong></div>
-  <div class="estoque-stat"><span>Valor em estoque (custo médio)</span><strong>R$ {{ total_value|br_num }}</strong></div>
-  <div class="estoque-stat"><span>Valor pelo último preço</span><strong>R$ {{ last_value|br_num }}</strong></div>
-  <div class="estoque-stat"><span>Produtos sem saldo</span><strong>{{ zero_products }}</strong></div>
-  {% if selected_unit %}<div class="estoque-stat estoque-stat-quantity"><span>Quantidade total em {{ selected_unit }}</span><strong>{{ total_quantity|qtd }} {{ selected_unit }}</strong></div>{% endif %}
-</div>
-<div class="estoque-stats"><div class="estoque-stat"><span>Normal</span><strong>{{ status_counts['Normal'] }}</strong></div><div class="estoque-stat"><span>Reposição necessária</span><strong>{{ status_counts['Reposição necessária'] }}</strong></div><div class="estoque-stat"><span>Estoque crítico</span><strong>{{ status_counts['Estoque crítico'] }}</strong></div><div class="estoque-stat"><span>Não configurado</span><strong>{{ status_counts['Não configurado'] }}</strong></div><div class="estoque-stat"><span>Saldo pendente</span><strong>{{ status_counts['Saldo pendente de conferência'] }}</strong></div></div>
-<form class="report-filters estoque-filters" method="get" action="{{ url_for('estoque') }}">
-  <div class="filter-panel">
-    <div class="filter-title">Filtros de produtos</div>
-    <div class="filter-grid">
-      <div class="filter-field filter-field-search"><label for="q">Código ou descrição</label><input id="q" name="q" value="{{ search }}" placeholder="Ex.: 237 ou parafuso"></div>
-      <div class="filter-field"><label for="unit">Unidade</label><select id="unit" name="unit"><option value="">Todas</option>{% for u in ['UN','CX','KG','M','PC','MT','PT','BR','CH','PA','LT','JG','CJ','RL','CT'] %}<option value="{{ u }}" {% if selected_unit==u %}selected{% endif %}>{{ u }}</option>{% endfor %}</select></div>
-      <div class="filter-field"><label for="status">Situação</label><select id="status" name="status">{% for value,label in [('all','Todos'),('active','Ativos'),('inactive','Inativos'),('positive','Com saldo'),('zero','Sem saldo')] %}<option value="{{ value }}" {% if selected_status==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+{% extends 'base_fragment.html' %}
+{% block content %}
+<div class="panel estoque-panel">
+  <!-- Cabecalho do controle: mostra a acao de cadastro e o resumo de notificacoes. -->
+  <header class="estoque-header">
+    <div>
+      <h2>Controle de Estoque</h2>
+      <p class="muted-text">Produtos cadastrados e saldos disponíveis.</p>
     </div>
-    <div class="filter-actions"><a class="btn secondary" href="{{ url_for('estoque') }}">Limpar</a><button class="btn primary" type="submit">Aplicar filtros</button></div>
+    <div class="estoque-header-actions">
+      {% if current_user.sector == 'Almoxarifado' %}
+      <a class="btn primary" href="{{ url_for('cadastro_produto') }}">+ Cadastrar produto</a>
+      {% endif %}
+
+      <!-- O sino e um disclosure acessivel; abrir a lista nao altera os filtros. -->
+      <details class="stock-notifications">
+        <summary class="stock-notifications-trigger" aria-label="Notificações do estoque: {{ alert_count }} produtos">
+          <svg class="stock-bell-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+          </svg>
+          <span class="sr-only">Notificações do estoque</span>
+          <span class="stock-notification-count">{{ alert_count if alert_count < 100 else '99+' }}</span>
+        </summary>
+        <div class="stock-notification-panel">
+          <div class="stock-notification-heading">
+            <h3>Notificações de estoque</h3>
+            <p class="muted-text">Produtos ativos em todo o estoque, independentemente dos filtros da tabela.</p>
+          </div>
+          {% if alert_groups %}
+            {% for grupo in alert_groups %}
+            <!-- Cada grupo representa o alerta mais urgente de cada produto. -->
+            <section class="stock-alert-group">
+              <h4>{{ grupo.titulo }} <span>{{ grupo.produtos|length }}</span></h4>
+              <ul>
+                {% for produto in grupo.produtos %}
+                <li>
+                  <a href="{{ url_for('detalhe_produto', product_id=produto.id) }}">
+                    <span class="stock-alert-product"><strong>{{ produto.code }}</strong> {{ produto.description }}</span>
+                    <span class="stock-alert-balance">{{ produto.stock_quantity|qtd }} {{ produto.stock_unit }}</span>
+                  </a>
+                </li>
+                {% endfor %}
+              </ul>
+            </section>
+            {% endfor %}
+          {% else %}
+          <p class="stock-notification-empty" role="status">Nenhum produto ativo precisa de atenção agora.</p>
+          {% endif %}
+          <p class="stock-notification-note">Saldos pendentes de conferência ficam fora dos alertas até serem confirmados.</p>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  {% include 'estoque_messages.html' %}
+
+  <!-- Cartoes principais: quantidades e valor calculado pelo custo medio. -->
+  <div class="estoque-dashboard-heading">
+    <div>
+      <h3>Resumo do estoque{% if has_filters %} filtrado{% endif %}</h3>
+      <p class="muted-text">Os indicadores consideram todos os produtos que correspondem aos filtros, inclusive além dos 200 exibidos na tabela.</p>
+    </div>
+    {% if has_filters %}<span class="estoque-filter-badge">Filtros aplicados</span>{% endif %}
   </div>
-</form>
-<div class="estoque-table-wrap"><table class="estoque-table"><thead><tr><th>Código</th><th>Descrição</th><th>Unidade</th><th>Saldo</th><th>Custo médio</th><th>Valor em estoque</th>{% if current_user.sector == 'Almoxarifado' %}<th>Ações</th>{% endif %}</tr></thead><tbody>{% for product in products %}<tr><td>{{ product.code }}</td><td><a href="{{ url_for('detalhe_produto', product_id=product.id) }}">{{ product.description }}</a></td><td>{{ product.stock_unit }}</td><td>{{ product.stock_quantity|qtd }}</td><td>R$ {{ product.average_unit_cost|br_num }}</td><td>R$ {{ (product.stock_quantity * product.average_unit_cost)|br_num }}</td>{% if current_user.sector == 'Almoxarifado' %}<td><div class="estoque-actions"><a class="btn primary" href="{{ url_for('nova_entrada_produto', product_id=product.id) }}">Nova Entrada</a><a class="btn secondary" href="{{ url_for('formulario_editar_produto', product_id=product.id) }}">Editar</a></div></td>{% endif %}</tr>{% else %}<tr><td colspan="{{ 7 if current_user.sector == 'Almoxarifado' else 6 }}">Nenhum produto encontrado.</td></tr>{% endfor %}</tbody></table></div><p class="muted-text">{% if current_user.sector == 'Compras' %}Consulta somente leitura. {% endif %}Exibindo {{ displayed_count }} de {{ total_products }} produtos encontrados (máximo de 200 por consulta).</p></div>{% endblock %}
+  <div class="estoque-stats estoque-stats-dashboard">
+    <div class="estoque-stat"><span>Produtos</span><strong>{{ total_products }}</strong></div>
+    <div class="estoque-stat"><span>Valor em estoque (custo médio)</span><strong>R$ {{ total_value|br_num }}</strong></div>
+    <div class="estoque-stat"><span>Produtos sem saldo</span><strong>{{ zero_products }}</strong></div>
+    {% if selected_unit %}
+    <div class="estoque-stat estoque-stat-quantity"><span>Quantidade total em {{ selected_unit }}</span><strong>{{ total_quantity|qtd }} {{ selected_unit }}</strong></div>
+    {% endif %}
+  </div>
+
+  <!-- Contadores de reposicao, com saldo pendente separado para evitar falso zero. -->
+  <div class="estoque-stats estoque-reorder-stats">
+    <div class="estoque-stat"><span>Reposição necessária</span><strong>{{ status_counts['Reposição necessária'] }}</strong></div>
+    <div class="estoque-stat"><span>Estoque crítico</span><strong>{{ status_counts['Estoque crítico'] }}</strong></div>
+    <div class="estoque-stat"><span>Sem gatilho</span><strong>{{ status_counts['Sem gatilho'] }}</strong></div>
+    <div class="estoque-stat"><span>Saldo pendente</span><strong>{{ status_counts['Saldo pendente de conferência'] }}</strong></div>
+  </div>
+
+  <!-- Os filtros afetam os cartoes e a listagem de produtos desta consulta. -->
+  <form class="report-filters estoque-filters" method="get" action="{{ url_for('estoque') }}">
+    <div class="filter-panel">
+      <div class="filter-title">Filtros de produtos</div>
+      <div class="filter-grid">
+        <div class="filter-field filter-field-search">
+          <label for="q">Código ou descrição</label>
+          <input id="q" name="q" value="{{ search }}" placeholder="Ex.: 237 ou parafuso">
+        </div>
+        <div class="filter-field">
+          <label for="unit">Unidade</label>
+          <select id="unit" name="unit">
+            <option value="">Todas</option>
+            {% for unidade in ['UN','CX','KG','M','PC','MT','PT','BR','CH','PA','LT','JG','CJ','RL','CT'] %}
+            <option value="{{ unidade }}" {% if selected_unit==unidade %}selected{% endif %}>{{ unidade }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="status">Situação</label>
+          <select id="status" name="status">
+            {% for valor, rotulo in [('all','Todos'),('active','Ativos'),('inactive','Inativos'),('positive','Com saldo'),('zero','Sem saldo')] %}
+            <option value="{{ valor }}" {% if selected_status==valor %}selected{% endif %}>{{ rotulo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="filter-actions">
+        <a class="btn secondary" href="{{ url_for('estoque') }}">Limpar</a>
+        <button class="btn primary" type="submit">Aplicar filtros</button>
+      </div>
+    </div>
+  </form>
+
+  <!-- A tabela continua rolavel em telas menores e respeita o perfil de leitura. -->
+  <div class="estoque-table-wrap">
+    <table class="estoque-table">
+      <thead><tr>
+        <th>Código</th><th>Descrição</th><th>Unidade</th><th>Saldo</th><th>Custo médio</th><th>Valor em estoque</th>
+        {% if current_user.sector == 'Almoxarifado' %}<th>Ações</th>{% endif %}
+      </tr></thead>
+      <tbody>
+        {% for produto in products %}
+        <tr>
+          <td>{{ produto.code }}</td>
+          <td><a href="{{ url_for('detalhe_produto', product_id=produto.id) }}">{{ produto.description }}</a></td>
+          <td>{{ produto.stock_unit }}</td>
+          <td>{{ produto.stock_quantity|qtd }}</td>
+          <td>R$ {{ produto.average_unit_cost|br_num }}</td>
+          <td>R$ {{ (produto.stock_quantity * produto.average_unit_cost)|br_num }}</td>
+          {% if current_user.sector == 'Almoxarifado' %}
+          <td><div class="estoque-actions">
+            <a class="btn primary" href="{{ url_for('nova_entrada_produto', product_id=produto.id) }}">Nova Entrada</a>
+            <a class="btn secondary" href="{{ url_for('formulario_editar_produto', product_id=produto.id) }}">Editar</a>
+          </div></td>
+          {% endif %}
+        </tr>
+        {% else %}
+        <tr><td colspan="{{ 7 if current_user.sector == 'Almoxarifado' else 6 }}">Nenhum produto encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted-text">
+    {% if current_user.sector == 'Compras' %}Consulta somente leitura. {% endif %}
+    Exibindo {{ displayed_count }} de {{ total_products }} produtos encontrados (máximo de 200 por consulta).
+  </p>
+</div>
+{% endblock %}

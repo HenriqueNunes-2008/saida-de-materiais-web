@@ -1,3 +1,5 @@
+"""Controla login, cadastro, sessao e recuperacao de acesso."""
+
 from flask import render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy.exc import SQLAlchemyError
@@ -5,12 +7,11 @@ from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
 from models import User, Employee, Project, MaterialOutput
-from services.legacy_service import get_nomes, get_projetos, get_report_suggestions, registrar_saida, gerar_excel
 import secrets
 from controllers.estoque_controller import verify_csrf
 
 def register():
-    # existing register handler (unchanged)
+    # Preserva o fluxo de cadastro ja usado pela aplicacao.
 
     if request.method == 'POST':
         verify_csrf()
@@ -27,7 +28,7 @@ def register():
             return redirect(url_for('index'))
 
         if User.query.filter_by(email=email).first():
-            # Keep the response indistinguishable to avoid confirming registered addresses.
+            # Mantem a resposta igual para nao revelar se um e-mail ja esta cadastrado.
             flash('Se os dados forem válidos, o cadastro seguirá para aprovação do TI.', 'success')
             return redirect(url_for('index'))
 
@@ -57,7 +58,7 @@ def login():
 
         login_user(user)
         flash('Login realizado com sucesso.', 'success')
-        # Route TI users to admin panel, Compras to reports, others to index
+        # Encaminha TI ao painel administrativo, Compras ao relatorio e os demais ao inicio.
         if user.sector == 'TI' or user.is_admin:
             return redirect(url_for('admin_panel'))
         if user.sector == 'Compras':
@@ -101,7 +102,7 @@ def change_password():
         flash('Preencha todos os campos de senha.', 'error')
         return redirect(request.referrer or url_for('index'))
 
-    # Verify current password
+    # Confere a senha atual antes de permitir a troca.
     if not current_user.check_password(current):
         flash('Senha atual incorreta.', 'error')
         return redirect(request.referrer or url_for('index'))

@@ -1,3 +1,5 @@
+"""Gerencia usuarios, aprovacoes e operacoes administrativas autorizadas."""
+
 from flask import render_template, request, redirect, url_for, flash, session, jsonify, send_file, make_response
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy.exc import SQLAlchemyError
@@ -5,13 +7,12 @@ from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
 from models import User, Employee, Project, MaterialOutput
-from services.legacy_service import get_nomes, get_projetos, get_report_suggestions, registrar_saida, gerar_excel
 import secrets
 from controllers.estoque_controller import csrf_token, verify_csrf
 
 @login_required
 def admin_panel():
-    # Allow TI sector or explicit admin flag
+    # Permite acesso ao setor de TI ou a usuarios com autorizacao administrativa.
     if not (current_user.is_admin or current_user.sector == 'TI'):
         flash('Acesso negado. Apenas TI pode acessar este painel.', 'error')
         return redirect(url_for('index'))
@@ -57,7 +58,7 @@ def admin_reset_password(user_id):
     user.set_password(new_password)
     user.reset_required = False
     db.session.commit()
-    # Do not put credentials in Flask's client-side flash/session cookie.
+    # Evita enviar credenciais por flash ou pelo cookie de sessao do navegador.
     users = User.query.order_by(User.id.desc()).all()
     response = make_response(render_template(
         'admin.html', users=users, csrf_token=csrf_token(),

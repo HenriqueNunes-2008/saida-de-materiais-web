@@ -66,6 +66,18 @@ def valid_quantity(raw, unit):
         raise StockValidationError(f'A unidade {unit} exige quantidade inteira.')
     return value
 
+def valid_stock_balance(raw, unit):
+    # A edicao aceita zero para correcao, mas respeita escala e regra da unidade.
+    try:
+        value = Decimal(str(raw).strip().replace(',', '.'))
+    except (InvalidOperation, ValueError, TypeError):
+        raise StockValidationError('Informe um saldo numérico válido.')
+    if not value.is_finite() or value < 0 or value > MAX_QTY or value.as_tuple().exponent < -3:
+        raise StockValidationError('O saldo deve ser não negativo e ter no máximo três casas decimais.')
+    if unit not in FRACTIONAL_UNITS and value != value.to_integral_value():
+        raise StockValidationError(f'A unidade {unit} exige saldo inteiro.')
+    return value
+
 def valid_price(raw):
     try:
         value = Decimal(str(raw).strip().replace(',', '.'))
@@ -133,22 +145,37 @@ def register_simple_entry(product_id, quantity, actor_id):
     except Exception:
         db.session.rollback();raise
 
-def edit_product(product_id, description, unit, price, minimum_stock=None, reorder_point=None):
-    description=clean_field(description,'Descrição',500)
-    unit=valid_unit(unit)
+def edit_product(product_id, description, quantity, price, minimum_stock, reorder_point, actor_id, confirm_stock=False):
+    description=clean_field(description,'Descricao',500)
     price=valid_price(price)
-    minimum_stock=valid_stock_limit(minimum_stock, 'Estoque mínimo', unit)
-    reorder_point=valid_stock_limit(reorder_point, 'Gatilho de reposição', unit)
-    if minimum_stock is not None and reorder_point is not None and reorder_point < minimum_stock:
-        raise StockValidationError('O gatilho deve ser maior ou igual ao estoque mínimo.')
     try:
         product=db.session.execute(select(Product).where(Product.id==product_id).with_for_update()).scalar_one_or_none()
-        if not product or not product.active:raise StockValidationError('Produto não encontrado ou inativo.')
-        # Impede mudar a unidade se já houve movimentação: o histórico permanece na unidade original.
-        if product.stock_unit!=unit and db.session.execute(select(StockMovement.id).where(StockMovement.product_id==product.id).limit(1)).first():
-            raise StockValidationError('Não é possível alterar a unidade de um produto com movimentações. Cadastre outro código.')
-        product.description=description;product.unit=unit;product.purchase_unit=unit
-        product.stock_unit=unit;product.conversion_factor=1
+        if not product or not product.active:raise StockValidationError('Produto nao encontrado ou inativo.')
+        if product.stock_pending_review and not confirm_stock:
+            raise StockValidationError('Confirme explicitamente o saldo físico antes de salvar este produto.')
+        quantity=valid_stock_balance(quantity, product.stock_unit)
+        minimum_stock=valid_stock_limit(minimum_stock, 'Estoque minimo', product.stock_unit)
+        reorder_point=valid_stock_limit(reorder_point, 'Gatilho de reposicao', product.stock_unit)
+        if minimum_stock is not None and reorder_point is not None and reorder_point < minimum_stock:
+            raise StockValidationError('O gatilho deve ser maior ou igual ao estoque minimo.')
+
+        before=Decimal(product.stock_quantity or 0)
+        average=Decimal(product.average_unit_cost or 0)
+        if quantity != before:
+            delta=abs(quantity-before)
+            total=movement_total(delta, average)
+            # A diferenca positiva e acompanhada por antes/depois para auditar aumentos e reducoes.
+            db.session.add(StockMovement(product_id=product.id, movement_type='AJUSTE_SALDO',
+                quantity=delta, original_quantity=delta, original_unit=product.stock_unit,
+                conversion_factor=1, applied_unit_price=average, applied_total_value=total,
+                unit_cost=average, total_cost=total, stock_before=before, stock_after=quantity,
+                average_cost_before=average, average_cost_after=average, recorded_by=actor_id,
+                notes=f'Ajuste manual de saldo: {before} para {quantity} {product.stock_unit}.'))
+            product.stock_quantity=quantity
+
+        if confirm_stock:
+            product.stock_pending_review=False
+        product.description=description
         product.last_unit_price=price;product.last_purchase_price=price
         product.minimum_stock=minimum_stock;product.reorder_point=reorder_point
         product.updated_at=datetime.now(timezone.utc)
@@ -170,11 +197,12 @@ def valid_stock_limit(raw, label, unit=None):
     return value
 
 def reorder_status(product):
+    # Pendencia fisica prevalece sobre limites; depois sao aplicados minimo e gatilho.
     if getattr(product, 'stock_pending_review', False):
         return 'Saldo pendente de conferência'
     minimum, trigger = product.minimum_stock, product.reorder_point
     if minimum is None and trigger is None:
-        return 'Não configurado'
+        return 'Sem gatilho'
     qty = Decimal(product.stock_quantity or 0)
     if minimum is not None and qty <= Decimal(minimum):
         return 'Estoque crítico'

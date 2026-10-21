@@ -1,3 +1,5 @@
+"""Carrega as configuracoes da aplicacao e a conexao definida no ambiente."""
+
 import os
 from dotenv import load_dotenv
 load_dotenv()

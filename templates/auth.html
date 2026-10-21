@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Telas de autenticacao, cadastro e recuperacao de acesso. -->
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
@@ -97,7 +98,7 @@
     </section>
   </main>
 
-  <!-- Forgot confirmation modal (opened from "Esqueci minha senha") -->
+  <!-- Modal confirma o envio das instrucoes de recuperacao de senha. -->
   <div id="forgotModal" class="modal" aria-hidden="true">
     <div class="modal-content">
       <button class="close" id="closeForgot">×</button>
@@ -130,7 +131,7 @@
         const target = link.dataset.pane;
 
         if (target === 'forgot') {
-          // open the dedicated forgot confirmation modal
+          // Abre o modal de confirmacao do pedido de recuperacao.
           const forgotModal = document.getElementById('forgotModal');
           const forgotEmailInput = document.getElementById('forgotEmailModalInput');
           const email = (loginEmailInput && loginEmailInput.value) ? loginEmailInput.value.trim() : '';
@@ -144,7 +145,7 @@
       });
     });
 
-    // Forgot modal controls
+    // Controla a abertura e o fechamento dos modais de recuperacao.
     const forgotModal = document.getElementById('forgotModal');
     const closeForgot = document.getElementById('closeForgot');
     const forgotCancel = document.getElementById('forgotCancel');
