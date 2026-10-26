@@ -21,6 +21,7 @@ class Product(db.Model):
     last_purchase_price = db.Column(db.Numeric(18, 6))
     minimum_stock = db.Column(db.Numeric(18, 3), nullable=True)
     reorder_point = db.Column(db.Numeric(18, 3), nullable=True)
+    maximum_stock = db.Column(db.Numeric(18, 3), nullable=True)
     stock_pending_review = db.Column(db.Boolean, nullable=False, default=False)
     active = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())

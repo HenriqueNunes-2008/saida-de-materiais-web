@@ -8,7 +8,7 @@ from sqlalchemy import select, func, case
 from sqlalchemy.exc import SQLAlchemyError
 from extensions import db
 from models import Product, StockMovement
-from services.estoque_service import create_product, register_simple_entry, edit_product, get_returnable, register_return, StockValidationError, UNITS, reorder_status
+from services.estoque_service import create_product, register_simple_entry, edit_product, get_returnable, register_return, StockValidationError, UNITS, reorder_status, stock_color_status
 
 def estoque_read_required(fn):
     @wraps(fn)
@@ -113,8 +113,12 @@ def estoque():
     for item in status_products:
         label = reorder_status(item)
         status_counts[label] = status_counts.get(label, 0) + 1
+    status_counts['Máximo atingido'] = sum(
+        stock_color_status(item)[0] == 'Máximo atingido' for item in status_products
+    )
     products = status_products[:200]
     statuses = {p.id: reorder_status(p) for p in products}
+    visual_statuses = {p.id: stock_color_status(p) for p in products}
     # Só somamos quantidades quando todas compartilham a mesma unidade.
     # Caso contrário, somar metros, caixas e quilos não tem significado.
     total_quantity = summary.total_quantity if unit else None
@@ -125,7 +129,8 @@ def estoque():
         total_products=summary.total_products,
         total_value=summary.total_value or zero,
         zero_products=summary.zero_products,
-        total_quantity=total_quantity, reorder_statuses=statuses, status_counts=status_counts,
+        total_quantity=total_quantity, reorder_statuses=statuses,
+        visual_statuses=visual_statuses, status_counts=status_counts,
         alert_groups=alert_groups, alert_count=alert_count,
         has_filters=bool(term or unit or status != 'all'),
         displayed_count=len(products),
@@ -139,7 +144,8 @@ def cadastro_produto():
             create_product(request.form.get('code'), request.form.get('description'),
                            request.form.get('unit'), request.form.get('quantity'),
                            request.form.get('price'), current_user.id,
-                           request.form.get('minimum_stock'), request.form.get('reorder_point'))
+                           request.form.get('minimum_stock'), request.form.get('reorder_point'),
+                           request.form.get('maximum_stock'))
             flash('Produto cadastrado e saldo inicial registrado com sucesso.', 'success')
             return redirect(url_for('estoque'))
         except StockValidationError as exc:
@@ -157,6 +163,7 @@ def detalhe_produto(product_id):
     movements = db.session.execute(select(StockMovement).where(StockMovement.product_id == product_id)
                                    .order_by(StockMovement.created_at.desc(), StockMovement.id.desc()).limit(100)).scalars().all()
     return render_template('estoque_detalhe.html', product=product, movements=movements,
+                           stock_status=stock_color_status(product),
                            title='Detalhes do Produto', csrf_token=csrf_token())
 
 def nova_entrada_produto(product_id):
@@ -191,7 +198,8 @@ def editar_produto(product_id):
     try:
         edit_product(product_id, request.form.get('description'), request.form.get('quantity'),
                      request.form.get('price'), request.form.get('minimum_stock'),
-                     request.form.get('reorder_point'), current_user.id,
+                     request.form.get('reorder_point'), request.form.get('maximum_stock'),
+                     current_user.id,
                      request.form.get('confirm_stock') == 'yes')
         flash('Produto atualizado. Se o saldo mudou, o ajuste ficou registrado no histórico.', 'success')
     except StockValidationError as exc:

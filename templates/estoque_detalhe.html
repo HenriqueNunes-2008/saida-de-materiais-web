@@ -11,9 +11,12 @@
   </header>
   {% include 'estoque_messages.html' %}
 
+  <p><span class="status-chip {{ stock_status[1] }}">{{ stock_status[0] }}</span></p>
+
   <!-- Indicadores individuais; o custo medio serve para valorar o saldo atual. -->
   <div class="estoque-stats">
     <div class="estoque-stat"><span>Saldo atual</span><strong>{{ product.stock_quantity|qtd }} {{ product.stock_unit }}</strong></div>
+    <div class="estoque-stat"><span>Estoque mínimo / gatilho / máximo</span><strong>{{ product.minimum_stock|qtd if product.minimum_stock is not none else '—' }} / {{ product.reorder_point|qtd if product.reorder_point is not none else '—' }} / {{ product.maximum_stock|qtd if product.maximum_stock is not none else '—' }} {{ product.stock_unit }}</strong></div>
     <div class="estoque-stat"><span>Último preço por {{ product.stock_unit }}</span><strong>{% if product.last_unit_price is not none %}R$ {{ product.last_unit_price|br_num(4) }}{% else %}—{% endif %}</strong></div>
     <div class="estoque-stat"><span>Custo médio por {{ product.stock_unit }}</span><strong>R$ {{ product.average_unit_cost|br_num(4) }}</strong></div>
     <div class="estoque-stat"><span>Valor pelo último preço</span><strong>R$ {{ (product.stock_quantity * (product.last_unit_price or 0))|br_num }}</strong></div>

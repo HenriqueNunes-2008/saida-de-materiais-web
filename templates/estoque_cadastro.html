@@ -40,7 +40,10 @@
     <label for="reorder_point">Gatilho de reposição (opcional)</label>
     <input id="reorder_point" name="reorder_point" type="number" min="0" step="0.001" inputmode="decimal">
 
-    <p class="muted-text">Somente KG, M, MT e LT aceitam frações, até três casas decimais. O cadastro registra o saldo inicial no histórico.</p>
+    <label for="maximum_stock">Estoque máximo (opcional)</label>
+    <input id="maximum_stock" name="maximum_stock" type="number" min="0" step="0.001" inputmode="decimal">
+
+    <p class="muted-text">O máximo deve ser igual ou maior que o gatilho e o mínimo. Limites vazios ficam sem configuração. Somente KG, M, MT e LT aceitam frações, até três casas decimais. O cadastro registra o saldo inicial no histórico.</p>
     <button class="btn primary" type="submit">Cadastrar produto</button>
   </form>
 </div>

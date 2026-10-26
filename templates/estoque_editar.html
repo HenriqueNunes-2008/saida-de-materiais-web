@@ -24,6 +24,8 @@
     <input id="minimum_stock" name="minimum_stock" type="number" min="0" step="{{ '0.001' if product.stock_unit in ['KG','M','MT','LT'] else '1' }}" value="{{ product.minimum_stock|decimal_input if product.minimum_stock is not none else '' }}">
     <label for="reorder_point">Gatilho de reposição (opcional)</label>
     <input id="reorder_point" name="reorder_point" type="number" min="0" step="{{ '0.001' if product.stock_unit in ['KG','M','MT','LT'] else '1' }}" value="{{ product.reorder_point|decimal_input if product.reorder_point is not none else '' }}">
+    <label for="maximum_stock">Estoque máximo (opcional)</label>
+    <input id="maximum_stock" name="maximum_stock" type="number" min="0" step="{{ '0.001' if product.stock_unit in ['KG','M','MT','LT'] else '1' }}" value="{{ product.maximum_stock|decimal_input if product.maximum_stock is not none else '' }}">
     <button class="btn primary" type="submit">Salvar alterações</button>
   </form>
 </div>

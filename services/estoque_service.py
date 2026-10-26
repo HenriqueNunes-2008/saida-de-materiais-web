@@ -108,7 +108,7 @@ def add_entry(product, kind, qty, price, actor_id, notes):
     product.last_purchase_price=price
     product.updated_at=datetime.now(timezone.utc)
 
-def create_product(code, description, unit, quantity, price, actor_id, minimum_stock=None, reorder_point=None):
+def create_product(code, description, unit, quantity, price, actor_id, minimum_stock=None, reorder_point=None, maximum_stock=None):
     code=clean_field(code,'Código',100)
     description=clean_field(description,'Descrição',500)
     unit=valid_unit(unit)
@@ -116,14 +116,14 @@ def create_product(code, description, unit, quantity, price, actor_id, minimum_s
     price=valid_price(price)
     minimum_stock=valid_stock_limit(minimum_stock, 'Estoque mínimo', unit)
     reorder_point=valid_stock_limit(reorder_point, 'Gatilho de reposição', unit)
-    if minimum_stock is not None and reorder_point is not None and reorder_point < minimum_stock:
-        raise StockValidationError('O gatilho deve ser maior ou igual ao estoque mínimo.')
+    maximum_stock=valid_stock_limit(maximum_stock, 'Estoque máximo', unit)
+    validate_stock_limits(minimum_stock, reorder_point, maximum_stock)
     if db.session.execute(select(Product.id).where(Product.code==code)).first():
         raise StockValidationError('Código já cadastrado.')
     try:
         product=Product(code=code,description=description,unit=unit,purchase_unit=unit,
             stock_unit=unit,conversion_factor=1,stock_quantity=Decimal('0'),average_unit_cost=Decimal('0'),
-            minimum_stock=minimum_stock,reorder_point=reorder_point)
+            minimum_stock=minimum_stock,reorder_point=reorder_point,maximum_stock=maximum_stock)
         db.session.add(product);db.session.flush()
         add_entry(product,'SALDO_INICIAL',qty,price,actor_id,'Cadastro inicial')
         db.session.commit()
@@ -145,7 +145,7 @@ def register_simple_entry(product_id, quantity, actor_id):
     except Exception:
         db.session.rollback();raise
 
-def edit_product(product_id, description, quantity, price, minimum_stock, reorder_point, actor_id, confirm_stock=False):
+def edit_product(product_id, description, quantity, price, minimum_stock, reorder_point, maximum_stock, actor_id, confirm_stock=False):
     description=clean_field(description,'Descricao',500)
     price=valid_price(price)
     try:
@@ -156,8 +156,8 @@ def edit_product(product_id, description, quantity, price, minimum_stock, reorde
         quantity=valid_stock_balance(quantity, product.stock_unit)
         minimum_stock=valid_stock_limit(minimum_stock, 'Estoque minimo', product.stock_unit)
         reorder_point=valid_stock_limit(reorder_point, 'Gatilho de reposicao', product.stock_unit)
-        if minimum_stock is not None and reorder_point is not None and reorder_point < minimum_stock:
-            raise StockValidationError('O gatilho deve ser maior ou igual ao estoque minimo.')
+        maximum_stock=valid_stock_limit(maximum_stock, 'Estoque maximo', product.stock_unit)
+        validate_stock_limits(minimum_stock, reorder_point, maximum_stock)
 
         before=Decimal(product.stock_quantity or 0)
         average=Decimal(product.average_unit_cost or 0)
@@ -178,6 +178,7 @@ def edit_product(product_id, description, quantity, price, minimum_stock, reorde
         product.description=description
         product.last_unit_price=price;product.last_purchase_price=price
         product.minimum_stock=minimum_stock;product.reorder_point=reorder_point
+        product.maximum_stock=maximum_stock
         product.updated_at=datetime.now(timezone.utc)
         db.session.commit()
     except Exception:
@@ -196,6 +197,15 @@ def valid_stock_limit(raw, label, unit=None):
         raise StockValidationError(f'{label} deve ser inteiro para a unidade {unit}.')
     return value
 
+def validate_stock_limits(minimum, trigger, maximum):
+    """Confere a ordem dos limites que estiverem preenchidos."""
+    if minimum is not None and trigger is not None and trigger < minimum:
+        raise StockValidationError('O gatilho deve ser maior ou igual ao estoque minimo.')
+    if maximum is not None and minimum is not None and maximum < minimum:
+        raise StockValidationError('O estoque maximo deve ser maior ou igual ao minimo.')
+    if maximum is not None and trigger is not None and maximum < trigger:
+        raise StockValidationError('O estoque maximo deve ser maior ou igual ao gatilho.')
+
 def reorder_status(product):
     # Pendencia fisica prevalece sobre limites; depois sao aplicados minimo e gatilho.
     if getattr(product, 'stock_pending_review', False):
@@ -209,6 +219,26 @@ def reorder_status(product):
     if trigger is not None and qty <= Decimal(trigger):
         return 'Reposição necessária'
     return 'Normal'
+
+def stock_color_status(product):
+    """Classifica a faixa visual sem tratar saldo pendente como saldo zero."""
+    if getattr(product, 'stock_pending_review', False):
+        return 'Saldo pendente', 'status-neutral'
+
+    quantity = Decimal(product.stock_quantity or 0)
+    minimum = Decimal(product.minimum_stock) if product.minimum_stock is not None else None
+    trigger = Decimal(product.reorder_point) if product.reorder_point is not None else None
+    maximum = Decimal(product.maximum_stock) if product.maximum_stock is not None else None
+
+    if quantity <= 0 or (minimum is not None and quantity <= minimum):
+        return 'Estoque crítico', 'status-critical'
+    if maximum is not None and quantity >= maximum:
+        return 'Máximo atingido', 'status-success'
+    if maximum is not None and quantity < maximum:
+        return 'Abaixo do máximo', 'status-warning'
+    if maximum is None and trigger is not None and quantity <= trigger:
+        return 'Gatilho atingido', 'status-warning'
+    return 'Faixa não configurada', 'status-neutral'
 
 def get_returnable(output_id):
     output=db.session.get(MaterialOutput,output_id)

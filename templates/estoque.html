@@ -75,6 +75,7 @@
   <div class="estoque-stats estoque-reorder-stats">
     <div class="estoque-stat"><span>Reposição necessária</span><strong>{{ status_counts['Reposição necessária'] }}</strong></div>
     <div class="estoque-stat"><span>Estoque crítico</span><strong>{{ status_counts['Estoque crítico'] }}</strong></div>
+    <div class="estoque-stat"><span>Máximo atingido</span><strong>{{ status_counts['Máximo atingido'] }}</strong></div>
     <div class="estoque-stat"><span>Sem gatilho</span><strong>{{ status_counts['Sem gatilho'] }}</strong></div>
     <div class="estoque-stat"><span>Saldo pendente</span><strong>{{ status_counts['Saldo pendente de conferência'] }}</strong></div>
   </div>
@@ -117,7 +118,7 @@
   <div class="estoque-table-wrap">
     <table class="estoque-table">
       <thead><tr>
-        <th>Código</th><th>Descrição</th><th>Unidade</th><th>Saldo</th><th>Custo médio</th><th>Valor em estoque</th>
+        <th>Código</th><th>Descrição</th><th>Unidade</th><th>Saldo</th><th>Situação</th><th>Custo médio</th><th>Valor em estoque</th>
         {% if current_user.sector == 'Almoxarifado' %}<th>Ações</th>{% endif %}
       </tr></thead>
       <tbody>
@@ -127,6 +128,7 @@
           <td><a href="{{ url_for('detalhe_produto', product_id=produto.id) }}">{{ produto.description }}</a></td>
           <td>{{ produto.stock_unit }}</td>
           <td>{{ produto.stock_quantity|qtd }}</td>
+          <td><span class="status-chip {{ visual_statuses[produto.id][1] }}">{{ visual_statuses[produto.id][0] }}</span></td>
           <td>R$ {{ produto.average_unit_cost|br_num }}</td>
           <td>R$ {{ (produto.stock_quantity * produto.average_unit_cost)|br_num }}</td>
           {% if current_user.sector == 'Almoxarifado' %}
@@ -137,7 +139,7 @@
           {% endif %}
         </tr>
         {% else %}
-        <tr><td colspan="{{ 7 if current_user.sector == 'Almoxarifado' else 6 }}">Nenhum produto encontrado.</td></tr>
+        <tr><td colspan="{{ 8 if current_user.sector == 'Almoxarifado' else 7 }}">Nenhum produto encontrado.</td></tr>
         {% endfor %}
       </tbody>
     </table>

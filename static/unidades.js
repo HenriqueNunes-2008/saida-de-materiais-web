@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const limits = [
     document.getElementById('minimum_stock'),
     document.getElementById('reorder_point'),
+    document.getElementById('maximum_stock'),
   ].filter(Boolean);
 
   // Apenas KG, M, MT e LT aceitam fracoes; as demais unidades usam inteiros.

@@ -588,6 +588,11 @@ body,button,input,select,textarea {
     background: #fff3d6;
     color: #855400;
 }
+/* Saldo igual ou abaixo do mínimo recebe o destaque de maior prioridade. */
+.status-critical {
+    background: #fde8e7;
+    color: #a62822;
+}
 .status-success {
     background: #e0f5e9;
     color: #176b41;
