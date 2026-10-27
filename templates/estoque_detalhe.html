@@ -17,9 +17,7 @@
   <div class="estoque-stats">
     <div class="estoque-stat"><span>Saldo atual</span><strong>{{ product.stock_quantity|qtd }} {{ product.stock_unit }}</strong></div>
     <div class="estoque-stat"><span>Estoque mínimo / gatilho / máximo</span><strong>{{ product.minimum_stock|qtd if product.minimum_stock is not none else '—' }} / {{ product.reorder_point|qtd if product.reorder_point is not none else '—' }} / {{ product.maximum_stock|qtd if product.maximum_stock is not none else '—' }} {{ product.stock_unit }}</strong></div>
-    <div class="estoque-stat"><span>Último preço por {{ product.stock_unit }}</span><strong>{% if product.last_unit_price is not none %}R$ {{ product.last_unit_price|br_num(2) }}{% else %}—{% endif %}</strong></div>
     <div class="estoque-stat"><span>Custo médio por {{ product.stock_unit }}</span><strong>R$ {{ product.average_unit_cost|br_num(2) }}</strong></div>
-    <div class="estoque-stat"><span>Valor pelo último preço</span><strong>R$ {{ (product.stock_quantity * (product.last_unit_price or 0))|br_num }}</strong></div>
   </div>
 
   <!-- Compras consulta; apenas Almoxarifado altera o produto e registra entradas. -->
@@ -35,7 +33,7 @@
   <div class="estoque-table-wrap">
     <table class="estoque-table">
       <thead><tr>
-        <th>Data</th><th>Tipo</th><th>Referência</th><th>Recebido</th><th>Conversão</th>
+        <th>Data</th><th>Tipo</th><th>Movimentação relacionada</th><th>Quantidade informada</th>
         <th>Quantidade em estoque</th><th>Preço por embalagem</th><th>Preço por unidade</th>
         <th>Custo médio após</th><th>Saldo após</th><th>Valor da movimentação</th>
       </tr></thead>
@@ -44,9 +42,8 @@
         <tr>
           <td>{{ movimento.created_at.strftime('%d/%m/%Y %H:%M') if movimento.created_at else '—' }}</td>
           <td>{{ 'Ajuste de saldo' if movimento.movement_type == 'AJUSTE_SALDO' else movimento.movement_type }}</td>
-          <td>{% if movimento.original_output_id %}Devolução da saída #{{ movimento.original_output_id }}{% elif movimento.material_output_id %}Saída #{{ movimento.material_output_id }}{% else %}—{% endif %}</td>
-          <td>{{ movimento.original_quantity if movimento.original_quantity is not none else movimento.quantity }} {{ movimento.original_unit or product.stock_unit }}</td>
-          <td>{{ movimento.conversion_factor if movimento.conversion_factor is not none else 1 }}</td>
+          <td>{% if movimento.original_output_id %}Estorno da saída #{{ movimento.original_output_id }}{% elif movimento.material_output_id %}Saída #{{ movimento.material_output_id }}{% else %}—{% endif %}</td>
+          <td>{{ (movimento.original_quantity if movimento.original_quantity is not none else movimento.quantity)|qtd }} {{ movimento.original_unit or product.stock_unit }}</td>
           <td>{{ movimento.quantity|qtd }} {{ product.stock_unit }}</td>
           <td>{% if movimento.original_unit_price is not none %}R$ {{ movimento.original_unit_price|br_num(2) }}{% else %}—{% endif %}</td>
           <td>{% if movimento.applied_unit_price is not none %}R$ {{ movimento.applied_unit_price|br_num(2) }}{% else %}—{% endif %}</td>
@@ -54,7 +51,7 @@
           <td>{{ movimento.stock_after|qtd }}</td>
           <td>R$ {{ movimento.total_cost|br_num }}</td>
         </tr>
-        {% else %}<tr><td colspan="11">Nenhuma movimentação.</td></tr>{% endfor %}
+        {% else %}<tr><td colspan="10">Nenhuma movimentação.</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>
