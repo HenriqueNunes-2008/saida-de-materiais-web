@@ -64,7 +64,7 @@
           <td>{{ m.employee_name }}</td><td>{{ m.project_name or '—' }}</td><td>{{ m.material }}</td>
           <td>{{ m.quantity|qtd }}</td><td>{{ f.unit if f else '—' }}</td>
           <td>{{ f.returned_qty|qtd if f else '—' }}</td><td>{{ f.net_qty|qtd if f else '—' }}</td>
-          <td>{% if f %}R$ {{ f.unit_price|br_num(6) }}{% else %}—{% endif %}</td>
+          <td>{% if f %}R$ {{ f.unit_price|br_num(2) }}{% else %}—{% endif %}</td>
           <td>{% if f %}R$ {{ f.total_value|br_num }}{% else %}—{% endif %}</td>
           <td>{% if f %}R$ {{ f.returned_value|br_num }}{% else %}—{% endif %}</td>
           <td>{% if f %}R$ {{ f.net_value|br_num }}{% else %}—{% endif %}</td>

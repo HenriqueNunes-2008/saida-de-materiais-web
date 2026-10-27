@@ -14,7 +14,7 @@
   <section class="estoque-section estoque-single-form">
     <p>Quantidade originalmente retirada: <strong>{{ original.quantity|qtd }}</strong></p>
     <p>Disponível para devolução: <strong>{{ remaining|qtd }}</strong></p>
-    <p>Preço histórico da saída: <strong>R$ {{ (original.applied_unit_price if original.applied_unit_price is not none else original.unit_cost)|br_num(4) }}</strong> por unidade.</p>
+    <p>Preço histórico da saída: <strong>R$ {{ (original.applied_unit_price if original.applied_unit_price is not none else original.unit_cost)|br_num(2) }}</strong> por unidade.</p>
 
     {% if remaining > 0 %}
     <!-- Motivo obrigatorio mantem o contexto da devolucao no historico. -->
